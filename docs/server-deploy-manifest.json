@@ -40,5 +40,20 @@
       "clickhouse"
     ],
     "agent_guide": "docs/server-deploy.md"
+  },
+  "windows_no_docker": {
+    "supported": true,
+    "entrypoint": "deploy/windows/README.md",
+    "install_script": "deploy/windows/install.ps1",
+    "start_script": "deploy/windows/start-server.ps1",
+    "stop_script": "deploy/windows/stop-server.ps1",
+    "check_script": "deploy/windows/check.ps1",
+    "env_example": "deploy/windows/env.example.ps1",
+    "requires_external_graylog": true,
+    "notes": [
+      "Use this path when the target server is Windows 10 and Docker is not available.",
+      "Graylog must expose a GELF HTTP input reachable from the ai_logger server.",
+      "Keep deploy/windows/env.local.ps1 private and uncommitted."
+    ]
   }
 }

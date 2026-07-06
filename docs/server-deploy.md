@@ -19,6 +19,27 @@ The server is dependency-free Python. Graylog GELF HTTP is the first supported
 centralized backend. JSON Lines remains useful as a local fallback or
 development backend.
 
+## Windows 10 Without Docker
+
+For a Windows 10 machine where Docker is not available, use the prepared
+agent-facing entrypoint:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\windows\install.ps1
+Copy-Item .\deploy\windows\env.example.ps1 .\deploy\windows\env.local.ps1
+# Edit env.local.ps1 with machine-local values before starting.
+powershell -ExecutionPolicy Bypass -File .\deploy\windows\start-server.ps1 -Background
+powershell -ExecutionPolicy Bypass -File .\deploy\windows\check.ps1
+```
+
+The scripts install this repository into `.venv`, load machine-local settings
+from `deploy\windows\env.local.ps1`, start `ai-logger-server`, and run health,
+ingest, and Graylog checks.
+
+This path prepares `ai_logger` on Windows. It does not install Graylog itself.
+Set `AI_LOGGER_GRAYLOG_GELF_URL` to an existing Graylog GELF HTTP input, or keep
+`AI_LOGGER_SERVER_JSONL_PATH` enabled as a local fallback until Graylog is ready.
+
 ## Required Inputs
 
 - Target machine and project folder.
@@ -40,6 +61,15 @@ development backend.
 7. Verify the backend received the test event.
 8. Record the selected URL, token source, and backend path in the target
    project's private deployment notes. Do not store raw secrets in shared docs.
+
+For Windows 10 without Docker, prefer the scripts under `deploy/windows/` before
+hand-running the generic commands below.
+
+To stop a server started by `deploy\windows\start-server.ps1 -Background`, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\windows\stop-server.ps1
+```
 
 ## Install
 

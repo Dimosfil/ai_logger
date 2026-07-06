@@ -29,6 +29,7 @@ See also:
 - [Adapter manifest](docs/adapter-manifest.json)
 - [Server deploy guide](docs/server-deploy.md)
 - [Server deploy manifest](docs/server-deploy-manifest.json)
+- [Windows no-Docker deploy entrypoint](deploy/windows/README.md)
 
 ## Plugin Configuration
 
