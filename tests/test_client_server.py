@@ -7,6 +7,7 @@ import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from urllib import request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -33,6 +34,28 @@ class _FakeResponse:
 
 
 class ClientServerTests(unittest.TestCase):
+    def test_ingest_server_health_endpoint_reports_ready(self) -> None:
+        server = create_server(
+            "127.0.0.1",
+            0,
+            aggregator=LogAggregator([DiskJsonLinesPlugin(Path(tempfile.gettempdir()) / "unused.jsonl")]),
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            host, port = server.server_address
+            with request.urlopen(f"http://{host}:{port}/health", timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            server.shutdown()
+            thread.join(timeout=3)
+            server.server_close()
+
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(payload["service"], "ai_logger")
+        self.assertEqual(payload["plugins"], 1)
+        self.assertEqual(payload["plugin_names"], ["disk_jsonl"])
+
     def test_client_plugin_sends_records_to_ingest_server(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "server.jsonl"

@@ -27,6 +27,8 @@ See also:
 - [Client adapters](docs/client-adapters.md)
 - [Agent install guide](docs/agent-install.md)
 - [Adapter manifest](docs/adapter-manifest.json)
+- [Server deploy guide](docs/server-deploy.md)
+- [Server deploy manifest](docs/server-deploy-manifest.json)
 
 ## Plugin Configuration
 
@@ -144,6 +146,13 @@ After installation, the console command is also available:
 ai-logger-server
 ```
 
+The server exposes a health endpoint:
+
+```powershell
+ai-logger-server-check
+Invoke-RestMethod -Uri "http://127.0.0.1:8765/health"
+```
+
 Server backend environment variables:
 
 - `AI_LOGGER_SERVER_HOST`: default `127.0.0.1`;
@@ -152,8 +161,16 @@ Server backend environment variables:
 - `AI_LOGGER_SERVER_JSONL_PATH`: write accepted logs to JSON Lines;
 - `AI_LOGGER_GRAYLOG_GELF_URL`: forward logs to a Graylog GELF HTTP input;
 - `AI_LOGGER_GRAYLOG_HOST`: GELF `host` value;
+- `AI_LOGGER_GRAYLOG_TIMEOUT`: Graylog request timeout in seconds;
 - `AI_LOGGER_CLICKHOUSE_URL`: ClickHouse HTTP endpoint;
 - `AI_LOGGER_CLICKHOUSE_TABLE`: target table for `JSONEachRow` inserts.
+- `AI_LOGGER_SERVER_CHECK_TIMEOUT`: health-check timeout in seconds.
+
+Graylog can be checked directly with:
+
+```powershell
+ai-logger-graylog-check
+```
 
 ## Architecture
 

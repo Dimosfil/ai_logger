@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "server": {
+    "package": "ai-logger",
+    "start_command": "ai-logger-server",
+    "health_command": "ai-logger-server-check",
+    "graylog_check_command": "ai-logger-graylog-check",
+    "health_url": "http://127.0.0.1:8765/health",
+    "ingest_url": "http://127.0.0.1:8765/ingest",
+    "required_runtime": "Python >=3.9",
+    "required_env": [],
+    "recommended_env": [
+      "AI_LOGGER_SERVER_HOST",
+      "AI_LOGGER_SERVER_PORT",
+      "AI_LOGGER_GRAYLOG_GELF_URL",
+      "AI_LOGGER_GRAYLOG_HOST"
+    ],
+    "secret_env": [
+      "AI_LOGGER_SERVER_TOKEN"
+    ],
+    "backend_env": {
+      "graylog_gelf": [
+        "AI_LOGGER_GRAYLOG_GELF_URL",
+        "AI_LOGGER_GRAYLOG_HOST",
+        "AI_LOGGER_GRAYLOG_TIMEOUT"
+      ],
+      "jsonl": [
+        "AI_LOGGER_SERVER_JSONL_PATH"
+      ],
+      "clickhouse": [
+        "AI_LOGGER_CLICKHOUSE_URL",
+        "AI_LOGGER_CLICKHOUSE_TABLE",
+        "AI_LOGGER_CLICKHOUSE_TIMEOUT"
+      ]
+    },
+    "primary_backend": "graylog_gelf",
+    "implemented_backends": [
+      "graylog_gelf",
+      "jsonl",
+      "clickhouse"
+    ],
+    "agent_guide": "docs/server-deploy.md"
+  }
+}

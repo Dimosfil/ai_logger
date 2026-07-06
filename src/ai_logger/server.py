@@ -13,6 +13,20 @@ from .records import LogRecord
 class LogIngestHandler(BaseHTTPRequestHandler):
     server: "LogIngestHttpServer"
 
+    def do_GET(self) -> None:
+        if self.path.rstrip("/") != "/health":
+            self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+            return
+        self._send_json(
+            HTTPStatus.OK,
+            {
+                "status": "ok",
+                "service": "ai_logger",
+                "plugins": self.server.plugin_count,
+                "plugin_names": self.server.plugin_names,
+            },
+        )
+
     def do_POST(self) -> None:
         if self.path.rstrip("/") != "/ingest":
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
@@ -75,6 +89,17 @@ class LogIngestHttpServer(ThreadingHTTPServer):
         self.aggregator = aggregator
         self.token = token
         self.access_log = access_log
+
+    @property
+    def plugin_count(self) -> int:
+        return len(getattr(self.aggregator, "_plugins", ()))
+
+    @property
+    def plugin_names(self) -> list[str]:
+        return [
+            str(getattr(plugin, "name", type(plugin).__name__))
+            for plugin in getattr(self.aggregator, "_plugins", ())
+        ]
 
 
 def create_server(

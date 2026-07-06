@@ -20,6 +20,8 @@ classifiers = [
 [project.scripts]
 ai-logger-server = "ai_logger.server:main"
 ai-logger-client-check = "ai_logger.client_check:main"
+ai-logger-server-check = "ai_logger.server_check:main"
+ai-logger-graylog-check = "ai_logger.graylog_check:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

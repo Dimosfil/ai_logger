@@ -64,9 +64,24 @@ installation workflow. The first implemented verification entry point is
 `ai-logger-client-check`, which sends `ai_logger.client_check` to the configured
 server and returns a non-zero exit code when delivery fails.
 
+Project agents deploy the server through the documented server deploy manifest
+and deploy guide. `docs/server-deploy-manifest.json` is the machine-readable
+server deployment contract, and `docs/server-deploy.md` is the human-readable
+machine deployment workflow. The server verification entry point is
+`ai-logger-server-check`, which checks `/health` and returns a non-zero exit
+code when the server is unavailable or unhealthy.
+
+Graylog GELF HTTP is the first centralized server backend implementation.
+`GraylogGelfPlugin` converts accepted `LogRecord` instances to GELF 1.1 and
+sends them to `AI_LOGGER_GRAYLOG_GELF_URL`. `ai-logger-graylog-check` sends a
+direct `ai_logger.graylog_check` GELF event so an agent can verify the Graylog
+input before routing project traffic through the ai_logger server.
+
 `LogIngestHttpServer` is the server-side entry point. It accepts JSON
 `LogRecord` payloads at `/ingest`, optionally verifies a bearer token, restores
-records, and emits them into the server aggregator.
+records, and emits them into the server aggregator. It also exposes `/health`
+for machine deployment checks. `/health` reports plugin count and plugin names
+so an agent can confirm that `graylog_gelf` is enabled.
 
 `LogPlugin` implementations own delivery details. A plugin may write to disk,
 send over the network, keep records in memory, or adapt records to another
@@ -89,9 +104,15 @@ from the application logging path.
 - Python logging adapter: `src/ai_logger/logging_adapter.py`
 - Server ingest: `src/ai_logger/server.py`
 - Client install check: `src/ai_logger/client_check.py`
+- Server health check: `src/ai_logger/server_check.py`
+- Graylog backend check: `src/ai_logger/graylog_check.py`
 - Protocol documentation: `docs/ingest-protocol.md`
 - Adapter documentation: `docs/client-adapters.md`
 - Agent install documentation: `docs/agent-install.md`
 - Adapter manifest: `docs/adapter-manifest.json`
+- Server deploy documentation: `docs/server-deploy.md`
+- Server deploy manifest: `docs/server-deploy-manifest.json`
 - Verification: `tests/test_logging_core.py`,
-  `tests/test_client_server.py`, `tests/test_client_adapters.py`
+  `tests/test_client_server.py`, `tests/test_client_adapters.py`,
+  `tests/test_client_check.py`, `tests/test_server_check.py`,
+  `tests/test_graylog_check.py`
