@@ -348,6 +348,14 @@ gi старт
 gi restore
 ```
 
+For `gi start` / `gi restore`, the agent reads the latest handoff summary as
+the primary continuation artifact for a new chat. Reading only the summary
+filename, timestamp, or metadata is not enough: the agent must recover the
+current topic, key theses or decisions, blockers, and next useful direction,
+then report that context compactly and ask what to do next. It still avoids
+older summaries, full runbooks, logs, memory dumps, and diffs unless a concrete
+task needs them.
+
 Также: `gi start`, `gi восстанови`, `gi восстановить контекст`.
 
 Агент восстанавливает контекст из `AGENTS.md`, последнего handoff summary и

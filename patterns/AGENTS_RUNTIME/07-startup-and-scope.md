@@ -29,9 +29,13 @@
   - In final output, report completion status against each goal criterion and
     list any remaining gap as a clear blocker.
 - For `gi start`, `gi restore`, and title-only first messages, restore only the
-  minimum orientation needed for the next turn: local instructions, latest
-  summary metadata or relevant sections, and compact git state. Do not read full
-  summaries, runbooks, memory notes, logs, or diffs unless a concrete task needs
+  minimum orientation needed for the next turn: local instructions, the latest
+  handoff summary, and compact git state. The latest handoff summary is the
+  primary continuation artifact for a new chat: read it enough to recover the
+  current topic, key theses or decisions, blockers, and next useful direction.
+  Do not treat seeing only its filename, timestamp, or metadata as successful
+  restore. Keep the response compact and do not read unrelated full runbooks,
+  memory notes, logs, diffs, or older summaries unless a concrete task needs
   them.
 - Treat `gi start sprint`, `gi sprint start`, and equivalent active-sprint
   wording as more specific than plain `gi start`: route them through the
