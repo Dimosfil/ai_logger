@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "ingest_protocol": "docs/ingest-protocol.md",
+  "agent_install_guide": "docs/agent-install.md",
+  "default_check_command": "ai-logger-client-check",
+  "adapters": {
+    "python.logging": {
+      "status": "implemented",
+      "runtime": "Python >=3.9",
+      "package": "ai-logger",
+      "install": {
+        "editable_local": "python -m pip install -e <ai_logger_repo_path>",
+        "git": "python -m pip install git+https://github.com/Dimosfil/ai_logger.git"
+      },
+      "adapter": "ai_logger.AiLoggerHttpHandler",
+      "client_core": "ai_logger.AiLoggerClient",
+      "configuration": {
+        "required_env": [
+          "AI_LOGGER_SERVER_URL",
+          "AI_LOGGER_PROJECT",
+          "AI_LOGGER_SERVICE"
+        ],
+        "optional_env": [
+          "AI_LOGGER_SERVER_TOKEN",
+          "AI_LOGGER_ENVIRONMENT",
+          "AI_LOGGER_HOST",
+          "AI_LOGGER_HTTP_TIMEOUT",
+          "AI_LOGGER_FALLBACK_JSONL_PATH"
+        ]
+      },
+      "verification": {
+        "command": "ai-logger-client-check",
+        "success_signal": "exit code 0 and accepted test event on the ai_logger server"
+      }
+    },
+    "dotnet.aspnetcore": {
+      "status": "planned",
+      "runtime": ".NET / ASP.NET Core",
+      "adapter_shape": "Microsoft.Extensions.Logging ILoggerProvider",
+      "note": "Implement later; do not install for C# projects yet."
+    },
+    "node.pino": {
+      "status": "planned",
+      "runtime": "Node.js",
+      "adapter_shape": "pino transport"
+    },
+    "node.winston": {
+      "status": "planned",
+      "runtime": "Node.js",
+      "adapter_shape": "winston transport"
+    }
+  }
+}

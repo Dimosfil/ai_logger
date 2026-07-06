@@ -13,3 +13,11 @@ tools/deploy/ftp.local.json
 tools/deploy/prod.local.json
 tools/deploy/deploy-gateway.local.json
 *.log
+
+# Python build/test artifacts
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.py[cod]
+.pytest_cache/
