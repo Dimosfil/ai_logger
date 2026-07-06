@@ -76,6 +76,12 @@ implementation; project memory is the portable behavior record.
 
 - Do not store the only description of user-facing functionality in
   `tools/project-memory/`. Keep an overview in `README.md` or `docs/`.
+- Do not store product runtime/source packages, product plugin implementations,
+  product tests, or full product documentation under `tools/project-memory/`.
+  Project memory stores compact behavior contracts, decisions, implementation
+  maps, and evidence references for agents; code belongs in source/package
+  directories, tests in the test tree, and product documentation in
+  `README.md`, `docs/`, or runbooks.
 - Do not store raw work results, generated product outputs, screenshots, photos,
   crawled/downloaded files, large logs, model outputs, build artifacts, export
   bundles, or run datasets in `tools/project-memory/`. Put them in a

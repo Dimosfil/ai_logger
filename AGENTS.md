@@ -140,13 +140,22 @@ bundles, or run datasets in `tools/project-memory/`. Use a project-local
 artifact/evidence/output/data/docs-asset location and keep only compact
 manifests, summaries, checksums, or links in project memory when needed.
 
-Use `tools/` for durable development and agent tooling such as scripts,
-adapters, bootstrap commands, deployment helpers, and redacted examples or
-manifests. Do not use `tools/` as the default destination for generated product
-output, selected-run artifacts, uploaded site contents, screenshots, raw
-exports, build bundles, downloaded datasets, or one-off work results. Document
-the project's output, evidence, data, build, release, or docs-asset locations
-instead.
+Use `tools/` for durable development and agent tooling only. Before writing
+under `tools/`, classify whether the file is tooling or product material. Allow
+scripts, adapters, bootstrap commands, deployment helpers, verification helpers,
+agent-memory tooling, and small redacted examples or manifests. Do not put
+product runtime/source packages, product plugin implementations, product tests,
+full product documentation, generated product output, selected-run artifacts,
+uploaded site contents, screenshots, raw exports, build bundles, downloaded
+datasets, or one-off work results under `tools/`. Product code belongs under the
+project's source/package locations, tests under the test tree, product docs
+under `README.md`/`docs/`/runbooks, and artifacts under documented artifact,
+evidence, output, data, docs-asset, build, or release locations.
+
+Treat `tools/project-memory/` as a narrow exception for compact
+implementation-driving specifications, decisions, contracts, implementation
+maps, and evidence references. It is not a source package, plugin directory,
+product test tree, full documentation site, artifact bucket, or dump folder.
 
 General project documentation lives in `README.md`, `docs/`, and the runbook.
 Keep overview, visible functionality, stack, commands, operations, and
