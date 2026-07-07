@@ -58,22 +58,27 @@ without binding search behavior to DeepSeek-specific code.
 
 ## Mapping To ai_logger
 
-Current `ai_logger` smart search already has a narrower Python protocol:
+Current `ai_logger` smart search has a narrower Python protocol:
 `LogSearchLlmProvider.analyze(query, candidates, top_k=...)` in
-`src/ai_logger/log_search.py`. It also has a DeepSeek-specific stdlib client in
+`src/ai_logger/log_search.py`. Provider selection is implemented in
+`src/ai_logger/log_search_providers.py`, and stdlib transport clients live in
 `src/ai_logger/llm.py`.
 
-Portable logic worth adopting later:
+Portable logic adopted:
 
 - Split provider transport/config from log-search ranking and prompt shaping.
 - Add a small provider registry so `AI_LOGGER_LLM_PROVIDER` can select DeepSeek,
-  local-only, mock/test, and future OpenAI-compatible providers consistently.
+  local-only, mock/test, and OpenAI-compatible providers consistently.
 - Keep the log-search domain contract as the caller-owned layer: it should build
   candidate payloads, redact values, validate returned record IDs, and preserve
   local fallback behavior.
-- Reuse the output-contract idea for provider JSON parsing, but adapt it to
-  Python and to `ai_logger`'s expected incident-analysis schema.
 - Keep mock provider behavior deterministic for tests and offline verification.
+
+Portable logic still deferred:
+
+- Fenced JSON block extraction equivalent to `outputContracts.mjs`; the current
+  Python providers request whole-response JSON objects.
+- Codex app-server provider integration.
 
 ## Non-Goals
 
@@ -85,6 +90,4 @@ Portable logic worth adopting later:
 
 ## Verification Gaps
 
-- No code integration has been performed in `ai_logger`.
-- `ai_logger` does not yet have a provider registry equivalent.
 - Real provider integration tests should remain opt-in and environment-gated.

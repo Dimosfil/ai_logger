@@ -98,10 +98,9 @@ class JsonlLogSource:
         return list(records)
 
 
-class DeepSeekLogSearchProvider:
-    name = "deepseek"
-
-    def __init__(self, client: Any) -> None:
+class StructuredLlmLogSearchProvider:
+    def __init__(self, name: str, client: Any) -> None:
+        self.name = name
         self.client = client
 
     def analyze(
@@ -138,6 +137,11 @@ class DeepSeekLogSearchProvider:
                     continue
                 matches.append((record_id, str(item.get("reason") or "")))
         return LlmLogSearchAnalysis(summary=summary, matches=matches[:top_k])
+
+
+class DeepSeekLogSearchProvider(StructuredLlmLogSearchProvider):
+    def __init__(self, client: Any) -> None:
+        super().__init__("deepseek", client)
 
 
 class SmartLogSearcher:

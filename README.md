@@ -52,11 +52,22 @@ The helper `configured_logger()` can build plugins from environment variables:
 description. It first finds a local candidate set, then optionally asks an LLM
 provider to rank the candidates and summarize the likely issue.
 
-DeepSeek is the first provider:
+DeepSeek remains the default provider:
 
 ```powershell
 $env:AI_LOGGER_SERVER_JSONL_PATH = "logs/server.jsonl"
 $env:DEEPSEEK_API_KEY = "<secret>"
+ai-logger-log-search "authorization fails after deploy"
+```
+
+Use the shared provider contract with any OpenAI-compatible chat-completions
+endpoint:
+
+```powershell
+$env:AI_LOGGER_LLM_PROVIDER = "openai-compatible"
+$env:AI_LOGGER_LLM_BASE_URL = "https://llm.example.test/v1"
+$env:AI_LOGGER_LLM_API_KEY = "<secret>"
+$env:AI_LOGGER_LLM_MODEL = "your-model"
 ai-logger-log-search "authorization fails after deploy"
 ```
 
@@ -69,9 +80,13 @@ ai-logger-log-search "authorization fails after deploy" --no-llm
 Main LLM environment variables:
 
 - `AI_LOGGER_LOG_SEARCH_JSONL_PATH`, or fallback `AI_LOGGER_SERVER_JSONL_PATH`;
+- `AI_LOGGER_LLM_PROVIDER` or `LLM_PROVIDER`: `deepseek`,
+  `openai-compatible`, `mock`, `local`, or `none`;
 - `DEEPSEEK_API_KEY` or `AI_LOGGER_DEEPSEEK_API_KEY`;
 - `AI_LOGGER_DEEPSEEK_MODEL`, default `deepseek-v4-flash`;
 - `AI_LOGGER_DEEPSEEK_BASE_URL`, default `https://api.deepseek.com`.
+- `AI_LOGGER_LLM_BASE_URL`, `AI_LOGGER_LLM_API_KEY`, and
+  `AI_LOGGER_LLM_MODEL` for `openai-compatible`.
 
 ## Install
 
@@ -183,11 +198,28 @@ ai-logger-server-check
 Invoke-RestMethod -Uri "http://127.0.0.1:8765/health"
 ```
 
+The same server also exposes a local web UI at `http://127.0.0.1:8765/`.
+The UI shows projects, JSONL log files, level filters, recent records, and a
+natural-language AI search box with an LLM provider selector. It reads logs
+from `AI_LOGGER_WEB_LOGS_ROOT`, or falls back to `AI_LOGGER_QUERY_LOGS_PATH`,
+`AI_LOGGER_SERVER_PROJECT_DAILY_DIR`, `AI_LOGGER_SERVER_JSONL_PATH`, then
+`logs`.
+
+Useful UI endpoints:
+
+- `/api/overview`: projects, log files, levels, and active root path;
+- `/api/logs`: recent records, with optional `project`, `file`, `levels`, and
+  `limit` query parameters;
+- `/api/search`: POST endpoint for natural-language log search. It uses
+  `AI_LOGGER_LLM_PROVIDER` / `LLM_PROVIDER` when configured and falls back to
+  local ranking when no provider key exists.
+
 Server backend environment variables:
 
 - `AI_LOGGER_SERVER_HOST`: default `127.0.0.1`;
 - `AI_LOGGER_SERVER_PORT`: default `8765`;
 - `AI_LOGGER_SERVER_TOKEN`: optional bearer token required by `/ingest`;
+- `AI_LOGGER_WEB_LOGS_ROOT`: optional web UI read root for JSON Lines logs;
 - `AI_LOGGER_SERVER_JSONL_PATH`: write accepted logs to JSON Lines;
 - `AI_LOGGER_SERVER_PROJECT_DAILY_DIR`: write accepted logs to
   `<dir>/<project>/YYYY-MM-DD.jsonl`;

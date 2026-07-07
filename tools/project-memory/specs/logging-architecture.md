@@ -1,6 +1,6 @@
 # Logging Architecture
 
-Last reviewed: 2026-07-06
+Last reviewed: 2026-07-07
 
 ## Goal
 
@@ -19,6 +19,7 @@ Success criteria:
 - logging destinations are replaceable plugins;
 - disk, per-project daily JSONL, HTTP, Graylog GELF, and ClickHouse-oriented
   plugins are available;
+- a local web UI can browse stored JSONL logs by project, file, and level;
 - exception logging can be applied with a context manager or decorator;
 - plugin failures do not crash the application path by default.
 
@@ -35,6 +36,8 @@ flowchart LR
   ServerAggregator --> Graylog["GraylogGelfPlugin"]
   ServerAggregator --> ClickHouse["ClickHouseHttpPlugin"]
   ServerAggregator --> Other["Custom backend plugins"]
+  Ingest --> WebUi["Web UI and read API"]
+  WebUi --> StoredLogs["JSONL log files"]
 ```
 
 ## Contracts
@@ -102,11 +105,23 @@ It must not print or store `DEEPSEEK_API_KEY`; missing keys are reported as a
 configuration blocker. The CLI also supports `--print-context` for offline
 verification without an LLM call.
 
+The server web UI is the first browser inspection surface. `LogIngestHttpServer`
+serves the UI at `/`, project/file/level metadata at `/api/overview`, recent
+records at `/api/logs`, and natural-language search at `/api/search`. The UI
+reads JSON Lines logs from `AI_LOGGER_WEB_LOGS_ROOT`, then falls back through
+`AI_LOGGER_QUERY_LOGS_PATH`, `AI_LOGGER_SERVER_PROJECT_DAILY_DIR`,
+`AI_LOGGER_SERVER_JSONL_PATH`, and `logs`. Project folders follow the
+`ProjectDailyJsonLinesPlugin` layout: `<root>/<project>/YYYY-MM-DD.jsonl`.
+When no DeepSeek key is configured, `/api/search` must keep working through
+bounded local candidate ranking and return a warning instead of exposing or
+requesting a secret in the browser.
+
 `LogIngestHttpServer` is the server-side entry point. It accepts JSON
 `LogRecord` payloads at `/ingest`, optionally verifies a bearer token, restores
 records, and emits them into the server aggregator. It also exposes `/health`
-for machine deployment checks. `/health` reports plugin count and plugin names
-so an agent can confirm that `graylog_gelf` is enabled.
+for machine deployment checks and the browser UI/read API. `/health` reports
+plugin count and plugin names so an agent can confirm that `graylog_gelf` is
+enabled.
 
 `LogPlugin` implementations own delivery details. A plugin may write to disk,
 send over the network, keep records in memory, or adapt records to another
@@ -128,10 +143,12 @@ from the application logging path.
 - Client core: `src/ai_logger/client.py`
 - Python logging adapter: `src/ai_logger/logging_adapter.py`
 - Server ingest: `src/ai_logger/server.py`
+- Server web UI and read repository: `src/ai_logger/web.py`
 - Client install check: `src/ai_logger/client_check.py`
 - Server health check: `src/ai_logger/server_check.py`
 - Graylog backend check: `src/ai_logger/graylog_check.py`
-- LLM provider boundary: `src/ai_logger/llm.py`
+- LLM provider boundary: `src/ai_logger/llm.py`,
+  `src/ai_logger/log_search_providers.py`
 - Smart log search: `src/ai_logger/log_search.py`,
   `src/ai_logger/log_search_cli.py`
 - LLM log query: `src/ai_logger/log_query.py`
@@ -161,11 +178,14 @@ only the bounded candidate set to an LLM provider. This keeps large log files
 out of provider requests and gives deterministic fallback behavior when the LLM
 is unavailable.
 
-DeepSeek is the first provider. Its API key is read from `DEEPSEEK_API_KEY` or
-`AI_LOGGER_DEEPSEEK_API_KEY`. The key must not be persisted in source,
-documentation examples, project memory, logs, or search output. Model, base URL,
-timeout, thinking mode, token cap, candidate count, top-K, and JSONL path are
-configuration values, not code constants.
+DeepSeek remains the default provider. The search layer also supports the
+reusable `llm_providers` provider naming contract: `deepseek`,
+`openai-compatible`, `mock`, `local`, and `none`. DeepSeek keys are read from
+`DEEPSEEK_API_KEY` or `AI_LOGGER_DEEPSEEK_API_KEY`; generic OpenAI-compatible
+keys are read from `AI_LOGGER_LLM_API_KEY` or `LLM_API_KEY`. Keys must not be
+persisted in source, documentation examples, project memory, logs, or search
+output. Model, base URL, timeout, thinking mode, token cap, candidate count,
+top-K, and JSONL path are configuration values, not code constants.
 
 Provider integration is behind `LogSearchLlmProvider`. Future providers should
 implement the same query/candidate analysis contract and preserve the local
@@ -174,10 +194,11 @@ candidate-ranking fallback.
 ### Related Provider Logic Source
 
 `D:\AI\llm_providers` is registered as a connected project and reusable logic
-source for future smart-search provider refactoring. Its portable contracts are
-mapped in
+source for smart-search provider refactoring. Its portable contracts are mapped
+in
 `tools/project-memory/specs/integration-contracts/llm-providers-logic-map.md`.
-Adoption should keep `ai_logger`'s log-search domain contract, candidate
+The first adoption keeps `ai_logger`'s log-search domain contract, candidate
 redaction, record-id validation, and local fallback behavior as the caller-owned
 layer while moving generic provider selection, transport configuration, mock
-behavior, and JSON output parsing behind a swappable provider boundary.
+behavior, and JSON output parsing behind `src/ai_logger/log_search_providers.py`
+and the stdlib clients in `src/ai_logger/llm.py`.

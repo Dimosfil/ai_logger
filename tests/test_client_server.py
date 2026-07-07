@@ -20,6 +20,7 @@ from ai_logger import (  # noqa: E402
     ServerHttpPlugin,
     create_server,
 )
+from ai_logger.web import WebLogRepository  # noqa: E402
 
 
 class _FakeResponse:
@@ -55,6 +56,168 @@ class ClientServerTests(unittest.TestCase):
         self.assertEqual(payload["service"], "ai_logger")
         self.assertEqual(payload["plugins"], 1)
         self.assertEqual(payload["plugin_names"], ["disk_jsonl"])
+        self.assertTrue(payload["web"])
+
+    def test_ingest_server_serves_web_ui(self) -> None:
+        server = create_server("127.0.0.1", 0, aggregator=LogAggregator())
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            host, port = server.server_address
+            with request.urlopen(f"http://{host}:{port}/", timeout=5) as response:
+                html = response.read().decode("utf-8")
+        finally:
+            server.shutdown()
+            thread.join(timeout=3)
+            server.server_close()
+
+        self.assertIn("<title>ai_logger</title>", html)
+        self.assertIn("Ask AI about these logs", html)
+
+    def test_web_api_lists_projects_files_and_logs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "logs"
+            project_dir = root / "alpha"
+            project_dir.mkdir(parents=True)
+            log_path = project_dir / "2026-07-07.jsonl"
+            log_path.write_text(
+                "\n".join(
+                    [
+                        json.dumps({"logger": "alpha.worker", "level": "INFO", "message": "ok"}),
+                        json.dumps({"logger": "alpha.worker", "level": "ERROR", "message": "failed"}),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            server = create_server(
+                "127.0.0.1",
+                0,
+                aggregator=LogAggregator(),
+                web_logs=WebLogRepository(root),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = server.server_address
+                base_url = f"http://{host}:{port}"
+                with request.urlopen(f"{base_url}/api/overview", timeout=5) as response:
+                    overview = json.loads(response.read().decode("utf-8"))
+                with request.urlopen(
+                    f"{base_url}/api/logs?project=alpha&levels=ERROR",
+                    timeout=5,
+                ) as response:
+                    logs = json.loads(response.read().decode("utf-8"))
+            finally:
+                server.shutdown()
+                thread.join(timeout=3)
+                server.server_close()
+
+        self.assertEqual(overview["projects"][0]["name"], "alpha")
+        self.assertEqual(overview["files"][0]["name"], "2026-07-07.jsonl")
+        self.assertEqual(len(logs["records"]), 1)
+        self.assertEqual(logs["records"][0]["message"], "failed")
+
+    def test_web_search_uses_local_fallback_without_llm_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "logs"
+            project_dir = root / "alpha"
+            project_dir.mkdir(parents=True)
+            (project_dir / "2026-07-07.jsonl").write_text(
+                json.dumps(
+                    {
+                        "logger": "alpha.worker",
+                        "level": "ERROR",
+                        "message": "payment.failed",
+                        "context": {"order_id": "42"},
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            server = create_server(
+                "127.0.0.1",
+                0,
+                aggregator=LogAggregator(),
+                web_logs=WebLogRepository(root),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = server.server_address
+                body = json.dumps({"query": "payment failed", "project": "alpha"}).encode("utf-8")
+                http_request = request.Request(
+                    f"http://{host}:{port}/api/search",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with patch.dict("os.environ", {}, clear=True):
+                    with request.urlopen(http_request, timeout=5) as response:
+                        result = json.loads(response.read().decode("utf-8"))
+            finally:
+                server.shutdown()
+                thread.join(timeout=3)
+                server.server_close()
+
+        self.assertEqual(result["provider"], "local")
+        self.assertIn("payment", result["summary"])
+        self.assertEqual(result["matches"][0]["record"]["message"], "payment.failed")
+
+    def test_web_search_can_use_configured_mock_provider(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "logs"
+            project_dir = root / "alpha"
+            project_dir.mkdir(parents=True)
+            (project_dir / "2026-07-07.jsonl").write_text(
+                json.dumps(
+                    {
+                        "logger": "alpha.worker",
+                        "level": "ERROR",
+                        "message": "payment.failed",
+                        "context": {"order_id": "42"},
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            server = create_server(
+                "127.0.0.1",
+                0,
+                aggregator=LogAggregator(),
+                web_logs=WebLogRepository(root),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = server.server_address
+                body = json.dumps(
+                    {"query": "payment failed", "project": "alpha", "provider": "mock"}
+                ).encode("utf-8")
+                http_request = request.Request(
+                    f"http://{host}:{port}/api/search",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with patch.dict(
+                    "os.environ",
+                    {
+                        "AI_LOGGER_LLM_MOCK_RESPONSE": json.dumps(
+                            {"summary": "Mock web analysis.", "matches": []}
+                        ),
+                    },
+                    clear=False,
+                ):
+                    with request.urlopen(http_request, timeout=5) as response:
+                        result = json.loads(response.read().decode("utf-8"))
+            finally:
+                server.shutdown()
+                thread.join(timeout=3)
+                server.server_close()
+
+        self.assertEqual(result["provider"], "mock")
+        self.assertEqual(result["summary"], "Mock web analysis.")
 
     def test_client_plugin_sends_records_to_ingest_server(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

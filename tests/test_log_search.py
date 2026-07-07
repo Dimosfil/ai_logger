@@ -18,8 +18,11 @@ from ai_logger import (  # noqa: E402
     LogAggregator,
     LogLevel,
     Logger,
+    OpenAiCompatibleChatClient,
+    OpenAiCompatibleOptions,
     SmartLogSearcher,
 )
+from ai_logger.log_search_providers import create_log_search_llm_provider  # noqa: E402
 from ai_logger.log_search import LlmLogSearchAnalysis  # noqa: E402
 from ai_logger.log_search_cli import main as log_search_main  # noqa: E402
 
@@ -132,6 +135,48 @@ class LogSearchTests(unittest.TestCase):
         self.assertEqual(payload["response_format"], {"type": "json_object"})
         self.assertEqual(result["matches"][0]["id"], "abc")
 
+    def test_openai_compatible_client_posts_chat_completion_json_request(self) -> None:
+        requests = []
+        response_payload = {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "summary": "Found a worker timeout.",
+                                "matches": [{"id": "worker-1", "reason": "timeout"}],
+                            }
+                        )
+                    }
+                }
+            ]
+        }
+
+        def fake_urlopen(http_request, timeout):
+            requests.append((http_request, timeout))
+            return _FakeResponse(response_payload)
+
+        client = OpenAiCompatibleChatClient(
+            OpenAiCompatibleOptions(
+                api_key="test-key",
+                base_url="https://llm.example.test/v1/",
+                model="custom-model",
+                timeout_seconds=5,
+                max_tokens=111,
+            )
+        )
+        with patch("ai_logger.llm.request.urlopen", fake_urlopen):
+            result = client.complete_json("system", "user")
+
+        http_request, timeout = requests[0]
+        payload = json.loads(http_request.data.decode("utf-8"))
+        self.assertEqual(timeout, 5)
+        self.assertEqual(http_request.full_url, "https://llm.example.test/v1/chat/completions")
+        self.assertEqual(http_request.headers["Authorization"], "Bearer test-key")
+        self.assertEqual(payload["model"], "custom-model")
+        self.assertEqual(payload["max_tokens"], 111)
+        self.assertEqual(result["matches"][0]["id"], "worker-1")
+
     def test_deepseek_log_search_provider_formats_candidates(self) -> None:
         class FakeClient:
             def complete_json(self, system_prompt, user_prompt):
@@ -180,6 +225,51 @@ class LogSearchTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         output = fake_print.call_args.args[0]
         self.assertEqual(json.loads(output)["provider"], "local")
+
+    def test_provider_registry_can_create_mock_log_search_provider(self) -> None:
+        provider = create_log_search_llm_provider(
+            "mock",
+            environ={
+                "AI_LOGGER_LLM_MOCK_RESPONSE": json.dumps(
+                    {"summary": "Mock selected candidate.", "matches": []}
+                )
+            },
+        )
+
+        self.assertIsNotNone(provider)
+        self.assertEqual(provider.name, "mock")
+
+    def test_cli_can_use_mock_provider_for_search_line(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "server.jsonl"
+            logger = Logger("worker", LogAggregator([DiskJsonLinesPlugin(path)]))
+            logger.error("job.failed", job_id="42")
+
+            with patch.dict(
+                "os.environ",
+                {
+                    "AI_LOGGER_LLM_MOCK_RESPONSE": json.dumps(
+                        {"summary": "Mock analysis.", "matches": []}
+                    )
+                },
+                clear=False,
+            ):
+                with patch("builtins.print") as fake_print:
+                    exit_code = log_search_main(
+                        [
+                            "job failed",
+                            "--jsonl-path",
+                            str(path),
+                            "--provider",
+                            "mock",
+                            "--format",
+                            "json",
+                        ]
+                    )
+
+        self.assertEqual(exit_code, 0)
+        output = fake_print.call_args.args[0]
+        self.assertEqual(json.loads(output)["provider"], "mock")
 
 
 if __name__ == "__main__":

@@ -5,8 +5,9 @@ import json
 import os
 from pathlib import Path
 
-from .llm import DeepSeekChatClient, LlmProviderError
-from .log_search import DeepSeekLogSearchProvider, JsonlLogSource, SmartLogSearcher
+from .llm import LlmProviderError
+from .log_search import JsonlLogSource, SmartLogSearcher
+from .log_search_providers import create_log_search_llm_provider
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -21,7 +22,11 @@ def main(argv: list[str] | None = None) -> int:
         ),
         help="JSON Lines log path. Defaults to AI_LOGGER_LOG_SEARCH_JSONL_PATH, AI_LOGGER_SERVER_JSONL_PATH, or AI_LOGGER_JSONL_PATH.",
     )
-    parser.add_argument("--provider", default=os.environ.get("AI_LOGGER_LLM_PROVIDER", "deepseek"))
+    parser.add_argument(
+        "--provider",
+        default=os.environ.get("AI_LOGGER_LLM_PROVIDER") or os.environ.get("LLM_PROVIDER") or "deepseek",
+        help="LLM provider: deepseek, openai-compatible, mock, local, or none.",
+    )
     parser.add_argument("--no-llm", action="store_true", help="Use local lexical ranking only.")
     parser.add_argument("--max-records", type=int, default=int(os.environ.get("AI_LOGGER_LOG_SEARCH_MAX_RECORDS", "500")))
     parser.add_argument("--candidates", type=int, default=int(os.environ.get("AI_LOGGER_LOG_SEARCH_CANDIDATES", "30")))
@@ -34,15 +39,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     provider = None
-    if not args.no_llm and args.provider.lower() == "deepseek":
+    if not args.no_llm:
         try:
-            provider = DeepSeekLogSearchProvider(DeepSeekChatClient.from_env())
+            provider = create_log_search_llm_provider(args.provider)
         except LlmProviderError as exc:
-            print(f"DeepSeek configuration error: {exc}")
+            print(f"LLM provider configuration error: {exc}")
             return 2
-    elif not args.no_llm and args.provider.lower() not in {"local", "none"}:
-        print(f"Unsupported LLM provider: {args.provider}")
-        return 2
 
     query = " ".join(args.query)
     try:

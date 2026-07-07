@@ -1,6 +1,6 @@
 # Technology Stack
 
-Last reviewed: 2026-07-06
+Last reviewed: 2026-07-07
 
 Canonical source: this file
 Linked from: TODO
@@ -20,10 +20,10 @@ stack facts, commands, runtime assumptions, and operational notes here.
 | Layer | Technology | Evidence | Notes |
 | --- | --- | --- | --- |
 | Language/runtime | Python >= 3.9 | `pyproject.toml` | Standard-library implementation |
-| Frontend | None | repository files | This is a library package |
+| Frontend | Server-rendered stdlib web UI | `src/ai_logger/web.py`, `src/ai_logger/server.py` | Local log browser and natural-language search box |
 | Backend/API | HTTP ingest protocol, Python reference SDK, and stdlib HTTP ingest server | `docs/ingest-protocol.md`, `src/ai_logger/`, `src/ai_logger/server.py` | Cross-stack adapters send normalized records to `/ingest` |
 | Data/storage | JSON Lines log files through plugin | `src/ai_logger/plugins.py` | Storage is plugin-configured, not a required app database |
-| AI analysis | Optional LLM-backed log search | `src/ai_logger/llm.py`, `src/ai_logger/log_search.py` | DeepSeek is the first provider; provider is swappable |
+| AI analysis | Optional LLM-backed log search | `src/ai_logger/llm.py`, `src/ai_logger/log_search.py`, `src/ai_logger/log_search_providers.py` | DeepSeek is the default; `openai-compatible`, `mock`, `local`, and `none` follow the shared provider contract |
 | Build/package | setuptools | `pyproject.toml` | Editable install supported |
 | Test/quality | unittest | `tests/test_logging_core.py`, `tests/test_client_server.py` | Run with standard Python test discovery |
 | Deployment/runtime | Native client adapters plus local server command | `README.md`, `docs/client-adapters.md`, `pyproject.toml` | Project agents configure the adapter matching each stack |
@@ -45,10 +45,9 @@ stack facts, commands, runtime assumptions, and operational notes here.
 | ai_logger ingest server | Receives project client logs at `/ingest` | `src/ai_logger/server.py` | Optional bearer token |
 | Graylog GELF HTTP input | Optional server backend | `src/ai_logger/plugins.py` | Configured by `AI_LOGGER_GRAYLOG_GELF_URL` |
 | ClickHouse HTTP endpoint | Optional server backend | `src/ai_logger/plugins.py` | Configured by `AI_LOGGER_CLICKHOUSE_URL` and `AI_LOGGER_CLICKHOUSE_TABLE` |
-| DeepSeek API | Optional LLM provider for smart log search | `src/ai_logger/llm.py`, `docs/llm-log-search.md` | Key read from `DEEPSEEK_API_KEY` or `AI_LOGGER_DEEPSEEK_API_KEY`; never persisted |
+| DeepSeek API | Default LLM provider for smart log search | `src/ai_logger/llm.py`, `docs/llm-log-search.md` | Key read from `DEEPSEEK_API_KEY` or `AI_LOGGER_DEEPSEEK_API_KEY`; never persisted |
+| OpenAI-compatible chat API | Optional generic LLM provider for smart log search | `src/ai_logger/llm.py`, `src/ai_logger/log_search_providers.py`, `docs/llm-log-search.md` | Key read from `AI_LOGGER_LLM_API_KEY` or `LLM_API_KEY`; never persisted |
 
 ## Gaps
 
-- AI bot analysis is currently a CLI/read-side JSONL search flow; no long-lived
-  analysis server or chat UI is implemented yet.
 - No release publishing workflow is documented yet.

@@ -11,7 +11,14 @@ from .config import (
 )
 from .context import catch_and_log, log_exceptions
 from .levels import LogLevel
-from .llm import DeepSeekChatClient, DeepSeekOptions, LlmProviderError
+from .llm import (
+    DeepSeekChatClient,
+    DeepSeekOptions,
+    LlmProviderError,
+    MockChatClient,
+    OpenAiCompatibleChatClient,
+    OpenAiCompatibleOptions,
+)
 from .log_search import (
     DeepSeekLogSearchProvider,
     JsonlLogSource,
@@ -19,7 +26,9 @@ from .log_search import (
     LogSearchMatch,
     LogSearchResult,
     SmartLogSearcher,
+    StructuredLlmLogSearchProvider,
 )
+from .log_search_providers import create_log_search_llm_provider, normalize_log_search_provider
 from .logging_adapter import AiLoggerHttpHandler, log_record_from_python
 from .logger import Logger
 from .plugins import (
@@ -59,9 +68,13 @@ __all__ = [
     "LogSearchResult",
     "Logger",
     "MemoryLogPlugin",
+    "MockChatClient",
+    "OpenAiCompatibleChatClient",
+    "OpenAiCompatibleOptions",
     "ProjectDailyJsonLinesPlugin",
     "ServerHttpPlugin",
     "SmartLogSearcher",
+    "StructuredLlmLogSearchProvider",
     "build_aggregator_from_env",
     "build_client_from_env",
     "build_server_aggregator_from_env",
@@ -69,9 +82,11 @@ __all__ = [
     "configured_logging_handler",
     "configured_logger",
     "create_server",
+    "create_log_search_llm_provider",
     "get_tool_logger",
     "json_safe",
     "log_exceptions",
     "log_record_from_python",
+    "normalize_log_search_provider",
     "redact_value",
 ]
