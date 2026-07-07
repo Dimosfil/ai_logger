@@ -1,4 +1,4 @@
-﻿# Agent Instructions
+# Agent Instructions
 
 This file is the lightweight runtime entrypoint for this project. Detailed shared
 rules are copied into focused modules under `patterns/AGENTS_RUNTIME/` so agents
@@ -7,10 +7,8 @@ behavior as the full instruction kit.
 
 ## Project
 
-Repository: `ai_logger` (`https://github.com/Dimosfil/ai_logger.git`).
-
-Product purpose, target users, and primary runtime surface are not documented
-yet. Confirm these before implementation work that depends on product intent.
+Describe what this project is, who it serves, and the primary runtime or product
+surface.
 
 ## Project Goal
 
@@ -42,8 +40,8 @@ implemented against each goal criterion and list remaining gaps as blockers.
   blocker. The compact result must explicitly include the pending migration
   count, including `0` when no migrations are pending. Do not read `updates/`
   for this startup check.
-- If the request contains a GI chat command such as `gi ...`, `РіРё ...`, or a
-  known mojibake form such as `Р С–Р С‘ ...`, treat it as a concrete task even when
+- If the request contains a GI chat command such as `gi ...`, `ги ...`, or a
+  known mojibake form such as `РіРё ...`, treat it as a concrete task even when
   the message is short. First read `COMMANDS.md` when present, then read every
   runtime module routed to that command before acting.
 - For state-changing GI commands that start, stop, restart, build, rebuild,
@@ -51,8 +49,8 @@ implemented against each goal criterion and list remaining gaps as blockers.
   state, do
   not execute from memory, old chat examples, or a command name alone. If the
   command's routed module is unavailable, stop and report the missing path.
-- For `gi restart`, `gi reboot`, `gi docker`, `РіРё СЂРµСЃС‚Р°СЂС‚`, `РіРё СЂРµР±СѓС‚`,
-  `РіРё РґРѕРєРµСЂ`, and equivalent aliases,
+- For `gi restart`, `gi reboot`, `gi docker`, `ги рестарт`, `ги ребут`,
+  `ги докер`, and equivalent aliases,
   `patterns/AGENTS_RUNTIME/09-project-operation-commands.md` is mandatory
   context before any process inspection, Docker build, stop, start, or success
   report.
@@ -142,24 +140,19 @@ bundles, or run datasets in `tools/project-memory/`. Use a project-local
 artifact/evidence/output/data/docs-asset location and keep only compact
 manifests, summaries, checksums, or links in project memory when needed.
 
-Use `tools/` for durable development and agent tooling only. Before writing
-under `tools/`, classify whether the file is tooling or product material. Allow
-scripts, adapters, bootstrap commands, deployment helpers, verification helpers,
-agent-memory tooling, and small redacted examples or manifests. Do not put
-product runtime/source packages, product plugin implementations, product tests,
-full product documentation, generated product output, selected-run artifacts,
+Use `tools/` for durable development and agent tooling only, such as scripts,
+adapters, bootstrap commands, deployment helpers, verification helpers,
+agent-memory tooling, and redacted examples or manifests. Before writing under
+`tools/`, classify the file as tooling or product material. Do not put product
+runtime/source packages, product plugin implementations, product tests, full
+product documentation, generated product output, selected-run artifacts,
 uploaded site contents, screenshots, raw exports, build bundles, downloaded
-datasets, or one-off work results under `tools/`. Product code belongs under the
-project's source/package locations, tests under the test tree, product docs
-under `README.md`/`docs/`/runbooks, and artifacts under documented artifact,
-evidence, output, data, docs-asset, build, or release locations.
-
-Treat `tools/project-memory/` as a narrow exception for compact
-implementation-driving specifications, decisions, contracts, implementation
-maps, and evidence references. It is not a source package, plugin directory,
-product test tree, full documentation site, artifact bucket, or dump folder.
-If a requested write would violate this boundary and no project-local tooling
-contract explicitly allows it, stop and report the target-location blocker.
+datasets, or one-off work results there. Product code belongs in source/package
+locations, tests in the test tree, product docs in `README.md`, `docs/`, or
+runbooks, and artifacts in documented output, evidence, data, build, release,
+or docs-asset locations. `tools/project-memory/` may contain compact
+implementation-driving specifications and evidence references, but it is not a
+replacement for source, tests, docs, or artifact folders.
 
 General project documentation lives in `README.md`, `docs/`, and the runbook.
 Keep overview, visible functionality, stack, commands, operations, and

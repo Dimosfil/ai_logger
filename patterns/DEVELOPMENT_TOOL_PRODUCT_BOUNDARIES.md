@@ -22,18 +22,20 @@ comparison to a named repository or product.
   tooling or product material.
 - Use `tools/` for durable development tooling, automation scripts, adapters,
   bootstrap commands, deployment helpers, verification helpers, agent-memory
-  tooling, and small redacted example manifests.
-- Do not place product runtime/source packages, product plugin implementations,
-  product tests, full product documentation, generated product output,
-  selected-run artifacts, uploaded site contents, screenshots, raw exports,
-  build bundles, downloaded datasets, or one-off work results under `tools/`.
-  Store product code under source/package locations, tests under the test tree,
-  product docs under `README.md`/`docs/`/runbooks, and artifacts under
-  documented artifact, evidence, output, data, docs-asset, build, or release
-  locations.
+  tooling, and redacted example manifests. Before writing under `tools/`,
+  classify the file as tooling or product material. Product runtime/source
+  packages, product plugin implementations, product tests, full product
+  documentation, generated product output, selected-run artifacts, uploaded site
+  contents, screenshots, raw exports, build bundles, downloaded datasets, and
+  one-off work results do not belong under `tools/` merely because an agent or
+  script created them. Store product source in the project source/package tree,
+  tests in the test tree, product documentation in `README.md`, `docs/`, or
+  runbooks, and generated/evidence files in project-local artifact, evidence,
+  output, data, docs-asset, build, or release locations documented by the
+  project.
 - Treat `tools/project-memory/` as a narrow exception for compact
-  implementation-driving specifications, decisions, contracts, implementation
-  maps, and evidence references. It is not a source package, plugin directory,
+  implementation-driving specifications, decisions, contracts, and evidence
+  references used by agents. It is not a source package, plugin directory,
   product test tree, full documentation site, artifact bucket, or dump folder.
 - If a requested write would violate this boundary and no project-local tooling
   contract explicitly allows it, stop and report the target-location blocker

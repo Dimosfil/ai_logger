@@ -36,25 +36,25 @@
   selected or active workflow state as data, show debug/progress logs only for
   the selected run, and keep completed runs compact. Follow
   `patterns/DEVELOPMENT_TOOL_PRODUCT_BOUNDARIES.md`.
-- Before creating or moving any file under `tools/`, classify whether it is
-  tooling or product material. Use `tools/` only for durable development and
-  agent tooling: scripts, adapters, bootstrap commands, deployment helpers,
-  verification helpers, agent-memory tooling, and small redacted examples or
-  manifests. Do not put product runtime/source packages, product plugin
+- Treat `tools/` as a place for project-owned development and agent tooling
+  only: scripts, adapters, bootstrap commands, deployment helpers, verification
+  helpers, agent-memory tooling, and redacted examples or manifests. Before
+  creating or moving any file under `tools/`, classify whether the file is
+  tooling or product material. Product runtime/source packages, product plugin
   implementations, product tests, full product documentation, generated product
   output, selected-run artifacts, uploaded site contents, screenshots, raw
-  exports, build bundles, downloaded datasets, or one-off work results under
-  `tools/`. Put product code under source/package locations, tests under the
-  test tree, product docs under `README.md`/`docs/`/runbooks, and artifacts
-  under documented artifact, evidence, output, data, docs-asset, build, or
-  release locations.
-- Treat `tools/project-memory/` as a narrow exception for compact
-  implementation-driving specifications, decisions, contracts, implementation
-  maps, and evidence references. It is not a source package, plugin directory,
-  product test tree, full documentation site, artifact bucket, or dump folder.
-  If a requested write would violate this boundary and no project-local
-  tooling contract explicitly allows it, stop and report the target-location
-  blocker instead of silently writing into `tools/`.
+  exports, build bundles, downloaded datasets, and one-off work results must
+  not be placed under `tools/`. Put product code under the project's
+  source/package locations, tests under the test tree, product docs under
+  `README.md`/`docs/`/runbooks, and artifacts under project-local artifact,
+  evidence, output, data, docs-asset, build, or release locations documented by
+  the project. `tools/project-memory/` may contain compact
+  implementation-driving specifications and evidence references, but it must not
+  become the only product documentation layer or a home for source, tests,
+  runtime packages, generated outputs, or bulky evidence.
+  If a requested write would violate this boundary and no project-local tooling
+  contract explicitly allows it, stop and report the target-location blocker
+  instead of silently writing into `tools/`.
 - Do not hard-code values that can change by deployment, user choice, runtime
   environment, host machine, service discovery, credentials, filesystem layout,
   feature flags, product names, demo data, workflow labels, generated artifact

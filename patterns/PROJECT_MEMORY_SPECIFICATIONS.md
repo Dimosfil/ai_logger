@@ -79,12 +79,16 @@ inventory, and operational commands in `README.md`, `docs/`, and runbooks unless
 local instructions choose a compatibility path and link it clearly.
 
 Project memory stores specifications and compact evidence references, not raw
-work products. Do not place generated applications, product outputs, screenshots,
-photos, crawled/downloaded data, model outputs, large logs, build artifacts,
-export bundles, or run datasets under `tools/project-memory/`. Store those files
-in a project-local artifact/evidence/output/data location and keep only the
-minimal manifest, summary, checksum, or path/URL reference needed to explain a
-decision, contract, failure, or verification result.
+work products or product source trees. Do not place product runtime/source
+packages, product plugin implementations, product tests, full product
+documentation, generated applications, product outputs, screenshots, photos,
+crawled/downloaded data, model outputs, large logs, build artifacts, export
+bundles, or run datasets under `tools/project-memory/`. Store source code in the
+project source/package tree, tests in the test tree, product documentation in
+`README.md`, `docs/`, or runbooks, and generated/evidence files in a
+project-local artifact/evidence/output/data/build/release location. Keep only
+the minimal manifest, summary, checksum, or path/URL reference needed to explain
+a decision, contract, failure, or verification result.
 
 Do not use `tools/project-memory/` as a fallback destination for product code,
 product plugins, product tests, or full product documentation. Put product code
