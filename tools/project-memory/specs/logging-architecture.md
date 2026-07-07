@@ -191,6 +191,13 @@ Provider integration is behind `LogSearchLlmProvider`. Future providers should
 implement the same query/candidate analysis contract and preserve the local
 candidate-ranking fallback.
 
+The web UI natural-language search box uses the same provider registry as the
+CLI. Users can leave provider selection on automatic environment-driven routing
+or choose `deepseek`, `openai-compatible`, `mock`, or `local` for a single
+`/api/search` request. Search responses include the actual provider, warnings,
+selected records, scores, and LLM/local reasons so the answer remains
+evidence-backed.
+
 ### Related Provider Logic Source
 
 `D:\AI\llm_providers` is registered as a connected project and reusable logic
