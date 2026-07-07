@@ -55,6 +55,21 @@ class ServerCheckTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("failed", output.getvalue())
 
+    def test_server_check_uses_loopback_for_bind_all_host(self) -> None:
+        output = StringIO()
+
+        def fake_urlopen(request, timeout):
+            self.assertEqual(request.full_url, "http://127.0.0.1:8765/health")
+            return _FakeResponse({"status": "ok", "plugins": 1})
+
+        with patch("ai_logger.server_check.request.urlopen", fake_urlopen), patch(
+            "sys.stdout",
+            output,
+        ):
+            code = main(["--host", "0.0.0.0", "--port", "8765"])
+
+        self.assertEqual(code, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

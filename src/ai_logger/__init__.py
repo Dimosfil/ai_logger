@@ -20,6 +20,7 @@ from .plugins import (
     HttpJsonPlugin,
     LogPlugin,
     MemoryLogPlugin,
+    ProjectDailyJsonLinesPlugin,
     ServerHttpPlugin,
 )
 from .records import LogRecord
@@ -41,6 +42,7 @@ __all__ = [
     "LogRecord",
     "Logger",
     "MemoryLogPlugin",
+    "ProjectDailyJsonLinesPlugin",
     "ServerHttpPlugin",
     "build_aggregator_from_env",
     "build_client_from_env",

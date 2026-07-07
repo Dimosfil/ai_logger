@@ -36,9 +36,37 @@ The scripts install this repository into `.venv`, load machine-local settings
 from `deploy\windows\env.local.ps1`, start `ai-logger-server`, and run health,
 ingest, and Graylog checks.
 
-This path prepares `ai_logger` on Windows. It does not install Graylog itself.
-Set `AI_LOGGER_GRAYLOG_GELF_URL` to an existing Graylog GELF HTTP input, or keep
-`AI_LOGGER_SERVER_JSONL_PATH` enabled as a local fallback until Graylog is ready.
+This path prepares `ai_logger` on Windows. When no Graylog backend exists yet,
+use the local Docker Compose Graylog stack under `deploy/graylog/`, or keep
+`AI_LOGGER_SERVER_PROJECT_DAILY_DIR` enabled as a local fallback until Graylog is
+ready.
+
+## Local Graylog Backend
+
+For local development with Docker available, start Graylog before configuring
+the `ai_logger` server:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\graylog\start-graylog.ps1
+powershell -ExecutionPolicy Bypass -File .\deploy\graylog\create-gelf-http-input.ps1
+powershell -ExecutionPolicy Bypass -File .\deploy\graylog\check-graylog.ps1
+```
+
+The local stack exposes:
+
+- Graylog UI/API: `http://127.0.0.1:9000/`;
+- GELF HTTP input: `http://127.0.0.1:12201/gelf`.
+
+Then configure the `ai_logger` server:
+
+```powershell
+$env:AI_LOGGER_GRAYLOG_GELF_URL = "http://127.0.0.1:12201/gelf"
+$env:AI_LOGGER_GRAYLOG_HOST = "ai-logger-local"
+$env:AI_LOGGER_GRAYLOG_TIMEOUT = "5"
+```
+
+See `deploy/graylog/README.md` for stop commands, local credentials, and
+private `.env` handling.
 
 ## Required Inputs
 
@@ -87,7 +115,7 @@ python -m pip install git+https://github.com/Dimosfil/ai_logger.git
 
 ## Configure Graylog Backend
 
-Create or choose a Graylog GELF HTTP input, then configure the server:
+Create, start, or choose a Graylog GELF HTTP input, then configure the server:
 
 ```powershell
 $env:AI_LOGGER_SERVER_HOST = "127.0.0.1"
@@ -120,6 +148,23 @@ The Graylog payload uses GELF 1.1 fields:
   GELF additional fields.
 
 ## Configure JSONL Backend
+
+For multiple projects, prefer per-project daily files:
+
+```powershell
+$env:AI_LOGGER_SERVER_HOST = "127.0.0.1"
+$env:AI_LOGGER_SERVER_PORT = "8765"
+$env:AI_LOGGER_SERVER_TOKEN = "dev-secret"
+$env:AI_LOGGER_SERVER_PROJECT_DAILY_DIR = "logs/projects"
+```
+
+Accepted records are written to:
+
+```text
+logs/projects/<project>/YYYY-MM-DD.jsonl
+```
+
+The legacy single-file backend is still available:
 
 ```powershell
 $env:AI_LOGGER_SERVER_HOST = "127.0.0.1"
@@ -184,7 +229,8 @@ ai-logger-client-check
 For a JSONL backend, verify the file has a test event:
 
 ```powershell
-Get-Content -LiteralPath "logs/server.jsonl" -Tail 5
+$today = Get-Date -Format "yyyy-MM-dd"
+Get-Content -LiteralPath "logs/projects/server-deploy-check/$today.jsonl" -Tail 5
 ```
 
 For a Graylog backend, search Graylog for:
@@ -193,9 +239,27 @@ For a Graylog backend, search Graylog for:
 short_message:ai_logger.client_check OR short_message:ai_logger.graylog_check
 ```
 
+## Query Logs With DeepSeek
+
+After JSONL logging is enabled and events exist in the file, ask DeepSeek about
+the logs:
+
+```powershell
+$env:DEEPSEEK_API_KEY = "<secret>"
+ai-logger-log-query "What happened in the last run?" --logs-path "logs/projects"
+```
+
+For local verification without an LLM call:
+
+```powershell
+ai-logger-log-query "What happened?" --logs-path "logs/projects" --print-context
+```
+
 ## Backend Variables
 
 - `AI_LOGGER_SERVER_JSONL_PATH`: writes accepted records as JSON Lines.
+- `AI_LOGGER_SERVER_PROJECT_DAILY_DIR`: writes accepted records to
+  `<dir>/<project>/YYYY-MM-DD.jsonl`.
 - `AI_LOGGER_GRAYLOG_GELF_URL`: forwards accepted records to a Graylog GELF HTTP
   input.
 - `AI_LOGGER_GRAYLOG_HOST`: GELF `host` value.

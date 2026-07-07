@@ -17,7 +17,8 @@ Success criteria:
 - the server can route accepted records to selected backend systems;
 - an aggregator receives, enriches, filters, and fan-outs records;
 - logging destinations are replaceable plugins;
-- disk, HTTP, Graylog GELF, and ClickHouse-oriented plugins are available;
+- disk, per-project daily JSONL, HTTP, Graylog GELF, and ClickHouse-oriented
+  plugins are available;
 - exception logging can be applied with a context manager or decorator;
 - plugin failures do not crash the application path by default.
 
@@ -77,6 +78,30 @@ sends them to `AI_LOGGER_GRAYLOG_GELF_URL`. `ai-logger-graylog-check` sends a
 direct `ai_logger.graylog_check` GELF event so an agent can verify the Graylog
 input before routing project traffic through the ai_logger server.
 
+When no external Graylog backend exists, agents can start the project-local
+Docker Compose backend from `deploy/graylog/`. That stack runs Graylog Open,
+MongoDB, and OpenSearch, exposes the UI/API at `http://127.0.0.1:9000/`, and
+exposes the GELF HTTP input at `http://127.0.0.1:12201/gelf` after
+`deploy/graylog/create-gelf-http-input.ps1` creates the input. Local Graylog
+password material belongs in ignored `deploy/graylog/.env`, not in committed
+docs or project memory.
+
+`ProjectDailyJsonLinesPlugin` is the preferred local fallback when multiple
+projects send logs to one ai_logger server. It writes records under
+`<root>/<project>/YYYY-MM-DD.jsonl`, using the `context.project` value when
+present and a sanitized logger-name fallback otherwise. `AI_LOGGER_SERVER_JSONL_PATH`
+remains available for a single historical file, and both sinks may be enabled
+together when duplicate local storage is intentional.
+
+`ai-logger-log-query` is the first LLM inspection surface. It reads JSON Lines
+records from one file or a directory of `*.jsonl` files. Its default path is
+`AI_LOGGER_QUERY_LOGS_PATH`, `AI_LOGGER_SERVER_PROJECT_DAILY_DIR`,
+`AI_LOGGER_SERVER_JSONL_PATH`, or `logs/server.jsonl`. It compacts recent
+records and asks DeepSeek through the OpenAI-compatible `/chat/completions` API.
+It must not print or store `DEEPSEEK_API_KEY`; missing keys are reported as a
+configuration blocker. The CLI also supports `--print-context` for offline
+verification without an LLM call.
+
 `LogIngestHttpServer` is the server-side entry point. It accepts JSON
 `LogRecord` payloads at `/ingest`, optionally verifies a bearer token, restores
 records, and emits them into the server aggregator. It also exposes `/health`
@@ -106,13 +131,16 @@ from the application logging path.
 - Client install check: `src/ai_logger/client_check.py`
 - Server health check: `src/ai_logger/server_check.py`
 - Graylog backend check: `src/ai_logger/graylog_check.py`
+- LLM log query: `src/ai_logger/log_query.py`
 - Protocol documentation: `docs/ingest-protocol.md`
 - Adapter documentation: `docs/client-adapters.md`
 - Agent install documentation: `docs/agent-install.md`
 - Adapter manifest: `docs/adapter-manifest.json`
 - Server deploy documentation: `docs/server-deploy.md`
 - Server deploy manifest: `docs/server-deploy-manifest.json`
+- Local Graylog deployment: `deploy/graylog/README.md`,
+  `deploy/graylog/docker-compose.yml`
 - Verification: `tests/test_logging_core.py`,
   `tests/test_client_server.py`, `tests/test_client_adapters.py`,
   `tests/test_client_check.py`, `tests/test_server_check.py`,
-  `tests/test_graylog_check.py`
+  `tests/test_graylog_check.py`, `tests/test_log_query.py`
