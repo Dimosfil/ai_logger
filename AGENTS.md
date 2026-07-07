@@ -79,7 +79,9 @@ Start here when a concrete restore/start task exists:
 If the startup script is unavailable, read only the smallest useful slices of:
 
 - `AGENTS.md`
-- latest relevant file in `tools/summary/`
+- latest handoff summary in `tools/summary/`; read its substantive sections
+  enough to recover the current topic, key theses or decisions, blockers, and
+  next useful direction, not only its filename or timestamp
 - `tools/AGENT_WORKING_AGREEMENTS.md`
 - `tools/AGENT_RUNBOOK.md`
 - relevant notes in `tools/project-memory/`
@@ -140,13 +142,25 @@ bundles, or run datasets in `tools/project-memory/`. Use a project-local
 artifact/evidence/output/data/docs-asset location and keep only compact
 manifests, summaries, checksums, or links in project memory when needed.
 
-Use `tools/` for durable development and agent tooling such as scripts,
-adapters, bootstrap commands, deployment helpers, and redacted examples or
-manifests. Do not use `tools/` as the default destination for generated product
-output, selected-run artifacts, uploaded site contents, screenshots, raw
-exports, build bundles, downloaded datasets, or one-off work results. Document
-the project's output, evidence, data, build, release, or docs-asset locations
-instead.
+Before writing under `tools/`, classify whether the target is development
+tooling or product material. Use `tools/` only for durable development and
+agent tooling such as scripts, adapters, bootstrap commands, deployment
+helpers, verification helpers, agent-memory tooling, and small redacted
+examples or manifests. Do not put product runtime/source packages, product
+plugin implementations, product tests, full product documentation, generated
+product output, selected-run artifacts, uploaded site contents, screenshots,
+raw exports, build bundles, downloaded datasets, or one-off work results under
+`tools/`. Put product code under source/package locations, tests under the test
+tree, product docs under `README.md`/`docs/`/runbooks, and artifacts under
+documented artifact, evidence, output, data, docs-asset, build, or release
+locations.
+
+`tools/project-memory/` is a narrow exception for compact
+implementation-driving specifications, decisions, contracts, implementation
+maps, and evidence references. It is not a source package, plugin directory,
+product test tree, full documentation site, artifact bucket, or dump folder.
+If a requested write would violate this boundary and no project-local tooling
+contract explicitly allows it, stop and report the target-location blocker.
 
 General project documentation lives in `README.md`, `docs/`, and the runbook.
 Keep overview, visible functionality, stack, commands, operations, and

@@ -15,6 +15,12 @@ different layers:
   knowledge: algorithms, business rules, workflows, invariants, architecture
   contracts, and verification guarantees.
 
+`tools/project-memory/` is a narrow exception inside `tools/`: it may contain
+compact implementation-driving specifications, decisions, contracts,
+implementation maps, and evidence references. It must not contain product
+runtime/source packages, product plugin implementations, product tests, full
+product documentation, generated output, artifacts, or raw work results.
+
 Handoff summaries should capture user intent, decisions, code or architecture
 changes, business logic, verification evidence, blockers, and next useful
 context as a thematic handoff, not as a short chronological retelling. Break the
@@ -79,6 +85,11 @@ export bundles, or run datasets under `tools/project-memory/`. Store those files
 in a project-local artifact/evidence/output/data location and keep only the
 minimal manifest, summary, checksum, or path/URL reference needed to explain a
 decision, contract, failure, or verification result.
+
+Do not use `tools/project-memory/` as a fallback destination for product code,
+product plugins, product tests, or full product documentation. Put product code
+under the source/package tree, tests under the test tree, and product docs under
+`README.md`, `docs/`, or runbooks.
 
 ## Connected Projects Register
 

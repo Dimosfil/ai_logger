@@ -37,6 +37,11 @@ tools/AGENT_RUNBOOK.md
 tools/AGENT_WORKING_AGREEMENTS.md
 ```
 
+Do not put full product documentation under `tools/`. `tools/` is for durable
+development and agent tooling. Product docs belong in `README.md`, `docs/`, or
+runbooks, with only compact implementation-driving references in project memory
+when a behavior contract needs them.
+
 For GI-enabled projects, the technology stack inventory belongs to this
 documentation layer even when an existing project stores the file under
 `tools/project-memory/specs/technology-stack.md` for compatibility. If both
@@ -68,6 +73,12 @@ tools/project-memory/
     integration-contracts/
 ```
 
+`tools/project-memory/` is a narrow exception inside `tools/` for compact
+implementation-driving specifications, decisions, contracts, implementation
+maps, and evidence references. It is not a product source package, plugin
+directory, product test tree, full documentation site, artifact bucket, or dump
+folder.
+
 Write project-memory specifications so another agent could rebuild the behavior
 on a different language, framework, platform, or UI toolkit. Code is the current
 implementation; project memory is the portable behavior record.
@@ -76,6 +87,9 @@ implementation; project memory is the portable behavior record.
 
 - Do not store the only description of user-facing functionality in
   `tools/project-memory/`. Keep an overview in `README.md` or `docs/`.
+- Do not store product runtime/source packages, product plugin
+  implementations, product tests, full product documentation, generated output,
+  or artifacts under `tools/project-memory/`.
 - Do not store raw work results, generated product outputs, screenshots, photos,
   crawled/downloaded files, large logs, model outputs, build artifacts, export
   bundles, or run datasets in `tools/project-memory/`. Put them in a

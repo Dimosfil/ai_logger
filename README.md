@@ -29,6 +29,7 @@ See also:
 - [Adapter manifest](docs/adapter-manifest.json)
 - [Server deploy guide](docs/server-deploy.md)
 - [Server deploy manifest](docs/server-deploy-manifest.json)
+- [LLM log search](docs/llm-log-search.md)
 - [Windows no-Docker deploy entrypoint](deploy/windows/README.md)
 
 ## Plugin Configuration
@@ -43,6 +44,33 @@ The helper `configured_logger()` can build plugins from environment variables:
   `http://127.0.0.1:8765/ingest`;
 - `AI_LOGGER_SERVER_TOKEN`: bearer token for the ingest server;
 - `AI_LOGGER_HTTP_TIMEOUT`: HTTP timeout in seconds.
+
+## LLM Log Search
+
+`ai-logger-log-search` searches JSON Lines logs by a natural-language problem
+description. It first finds a local candidate set, then optionally asks an LLM
+provider to rank the candidates and summarize the likely issue.
+
+DeepSeek is the first provider:
+
+```powershell
+$env:AI_LOGGER_SERVER_JSONL_PATH = "logs/server.jsonl"
+$env:DEEPSEEK_API_KEY = "<secret>"
+ai-logger-log-search "authorization fails after deploy"
+```
+
+Use local-only ranking without an external API call:
+
+```powershell
+ai-logger-log-search "authorization fails after deploy" --no-llm
+```
+
+Main LLM environment variables:
+
+- `AI_LOGGER_LOG_SEARCH_JSONL_PATH`, or fallback `AI_LOGGER_SERVER_JSONL_PATH`;
+- `DEEPSEEK_API_KEY` or `AI_LOGGER_DEEPSEEK_API_KEY`;
+- `AI_LOGGER_DEEPSEEK_MODEL`, default `deepseek-v4-flash`;
+- `AI_LOGGER_DEEPSEEK_BASE_URL`, default `https://api.deepseek.com`.
 
 ## Install
 

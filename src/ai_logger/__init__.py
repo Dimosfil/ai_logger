@@ -11,6 +11,15 @@ from .config import (
 )
 from .context import catch_and_log, log_exceptions
 from .levels import LogLevel
+from .llm import DeepSeekChatClient, DeepSeekOptions, LlmProviderError
+from .log_search import (
+    DeepSeekLogSearchProvider,
+    JsonlLogSource,
+    LogSearchCandidate,
+    LogSearchMatch,
+    LogSearchResult,
+    SmartLogSearcher,
+)
 from .logging_adapter import AiLoggerHttpHandler, log_record_from_python
 from .logger import Logger
 from .plugins import (
@@ -31,17 +40,26 @@ __all__ = [
     "AiLoggerClientOptions",
     "AiLoggerHttpHandler",
     "ClickHouseHttpPlugin",
+    "DeepSeekChatClient",
+    "DeepSeekLogSearchProvider",
+    "DeepSeekOptions",
     "DiskJsonLinesPlugin",
     "GraylogGelfPlugin",
     "HttpJsonPlugin",
+    "JsonlLogSource",
+    "LlmProviderError",
     "LogIngestHttpServer",
     "LogAggregator",
     "LogLevel",
     "LogPlugin",
     "LogRecord",
+    "LogSearchCandidate",
+    "LogSearchMatch",
+    "LogSearchResult",
     "Logger",
     "MemoryLogPlugin",
     "ServerHttpPlugin",
+    "SmartLogSearcher",
     "build_aggregator_from_env",
     "build_client_from_env",
     "build_server_aggregator_from_env",

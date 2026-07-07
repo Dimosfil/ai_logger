@@ -106,7 +106,11 @@ from the application logging path.
 - Client install check: `src/ai_logger/client_check.py`
 - Server health check: `src/ai_logger/server_check.py`
 - Graylog backend check: `src/ai_logger/graylog_check.py`
+- LLM provider boundary: `src/ai_logger/llm.py`
+- Smart log search: `src/ai_logger/log_search.py`,
+  `src/ai_logger/log_search_cli.py`
 - Protocol documentation: `docs/ingest-protocol.md`
+- LLM search documentation: `docs/llm-log-search.md`
 - Adapter documentation: `docs/client-adapters.md`
 - Agent install documentation: `docs/agent-install.md`
 - Adapter manifest: `docs/adapter-manifest.json`
@@ -115,4 +119,25 @@ from the application logging path.
 - Verification: `tests/test_logging_core.py`,
   `tests/test_client_server.py`, `tests/test_client_adapters.py`,
   `tests/test_client_check.py`, `tests/test_server_check.py`,
-  `tests/test_graylog_check.py`
+  `tests/test_graylog_check.py`, `tests/test_log_search.py`
+
+## LLM Log Search Contract
+
+Smart log search is a read-side analysis layer over collected server-side logs.
+It must not replace the ingest protocol or backend plugin model.
+
+The first implementation reads JSON Lines logs from a configured local file,
+keeps only a bounded recent window, ranks candidate records locally, then sends
+only the bounded candidate set to an LLM provider. This keeps large log files
+out of provider requests and gives deterministic fallback behavior when the LLM
+is unavailable.
+
+DeepSeek is the first provider. Its API key is read from `DEEPSEEK_API_KEY` or
+`AI_LOGGER_DEEPSEEK_API_KEY`. The key must not be persisted in source,
+documentation examples, project memory, logs, or search output. Model, base URL,
+timeout, thinking mode, token cap, candidate count, top-K, and JSONL path are
+configuration values, not code constants.
+
+Provider integration is behind `LogSearchLlmProvider`. Future providers should
+implement the same query/candidate analysis contract and preserve the local
+candidate-ranking fallback.

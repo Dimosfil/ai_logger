@@ -18,13 +18,26 @@ comparison to a named repository or product.
 
 - Treat every product, demo, customer, project type, task, workflow run, and
   generated artifact as replaceable input or output.
+- Before creating or moving any file under `tools/`, classify whether it is
+  tooling or product material.
 - Use `tools/` for durable development tooling, automation scripts, adapters,
-  bootstrap commands, deployment helpers, and redacted example manifests. Do not
-  place generated product output, selected-run artifacts, uploaded site
-  contents, screenshots, raw exports, build bundles, downloaded datasets, or
-  one-off work results under `tools/` merely because an agent or script created
-  them. Store those files in project-local artifact, evidence, output, data,
-  docs-asset, build, or release locations documented by the project.
+  bootstrap commands, deployment helpers, verification helpers, agent-memory
+  tooling, and small redacted example manifests.
+- Do not place product runtime/source packages, product plugin implementations,
+  product tests, full product documentation, generated product output,
+  selected-run artifacts, uploaded site contents, screenshots, raw exports,
+  build bundles, downloaded datasets, or one-off work results under `tools/`.
+  Store product code under source/package locations, tests under the test tree,
+  product docs under `README.md`/`docs/`/runbooks, and artifacts under
+  documented artifact, evidence, output, data, docs-asset, build, or release
+  locations.
+- Treat `tools/project-memory/` as a narrow exception for compact
+  implementation-driving specifications, decisions, contracts, implementation
+  maps, and evidence references. It is not a source package, plugin directory,
+  product test tree, full documentation site, artifact bucket, or dump folder.
+- If a requested write would violate this boundary and no project-local tooling
+  contract explicitly allows it, stop and report the target-location blocker
+  instead of silently writing into `tools/`.
 - Do not let one selected request, run, generated artifact, or debugging
   example define the generic runtime contract. Extract the reusable behavior and
   keep the concrete case as replaceable task data, fixture data, or documented
@@ -101,6 +114,8 @@ for:
 - fixed repository, folder, or artifact slugs;
 - generated or downloaded outputs written below `tools/` without an explicit
   project-local tooling contract that marks them as small reviewable manifests;
+- product source packages, plugin implementations, tests, or full product docs
+  written below `tools/`;
 - fixed stack choices that should come from task data;
 - fixed ports, URLs, service IDs, or dashboard links;
 - UI copy that names a generated product instead of the runtime feature;
