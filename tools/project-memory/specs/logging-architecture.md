@@ -170,3 +170,14 @@ configuration values, not code constants.
 Provider integration is behind `LogSearchLlmProvider`. Future providers should
 implement the same query/candidate analysis contract and preserve the local
 candidate-ranking fallback.
+
+### Related Provider Logic Source
+
+`D:\AI\llm_providers` is registered as a connected project and reusable logic
+source for future smart-search provider refactoring. Its portable contracts are
+mapped in
+`tools/project-memory/specs/integration-contracts/llm-providers-logic-map.md`.
+Adoption should keep `ai_logger`'s log-search domain contract, candidate
+redaction, record-id validation, and local fallback behavior as the caller-owned
+layer while moving generic provider selection, transport configuration, mock
+behavior, and JSON output parsing behind a swappable provider boundary.

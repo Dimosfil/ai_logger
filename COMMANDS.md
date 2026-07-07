@@ -72,6 +72,10 @@ gi vector
 gi info
 ги инфо
 gi stack
+gi logic
+ги логика
+gi logic <source> [focus]
+ги логика <ссылка-или-путь> [фокус]
 ги стек
 gi build
 gi собрать
@@ -210,6 +214,7 @@ the listed commands.
 | `gi vector` | Inspect semantic/vector retrieval readiness and metrics. |
 | `gi info`, `ги инфо` | Find or build the current project's purpose, visible functionality, and stack overview. |
 | `gi stack`, `ги стек` | Find or build the current project's verified technology stack inventory. |
+| `gi logic`, `ги логика`, `gi logic <source> [focus]` | Find, document, or adapt core project logic; with a source path/URL, study that explicit external project narrowly and map portable logic into the current project. |
 | `gi build`, `gi собрать`, `ги билд`, `ги собрать`, `gi rebuild`, `ги ребилд` | Build/rebuild the current project/application only, producing a release/upload-ready artifact such as a static `dist/`, package, executable, or other documented build output. |
 | `gi tools rebuild`, `gi rag rebuild`, `ги тулс ребилд`, `ги раг ребилд` | Rebuild the full configured GI/project-memory/RAG system after confirmation. |
 | `gi tools rebuild sql`, `gi rag rebuild sql` | Rebuild only the SQL/FTS structured-memory node. |
@@ -475,6 +480,45 @@ This command is an inventory/documentation command. It must not install
 dependencies, start services, rebuild indexes, call external APIs, read secrets,
 or inspect private paths outside the project root unless the user explicitly
 approves that scope.
+
+### Project Logic Adoption
+
+```text
+gi logic
+ги логика
+gi logic <source> [focus]
+ги логика <ссылка-или-путь> [фокус]
+```
+
+`gi logic` / `ги логика` asks the agent to recover the current project's core
+logic and make it durable for future GI work. With no source argument, the
+agent inspects only the current project and builds or updates a logic map in
+project memory: core domain modules, workflow contracts, invariants, data
+flows, integration boundaries, evidence paths, and verification gaps.
+
+`gi logic <source> [focus]` / `ги логика <ссылка-или-путь> [фокус]` asks the
+agent to study an explicitly named URL, repository, or local folder as a logic
+source and adapt the relevant portable behavior into the current project. The
+current project remains the write target unless the user explicitly says to
+modify the source project. The source argument is permission for this scoped
+logic-adoption task only; it is not permission to read secrets, local app data,
+logs, databases, generated artifacts, unrelated sibling repositories, or broad
+private folders.
+
+The agent first states the active project root and external source, then reads
+only task-relevant source instructions, README/docs, manifests, project-memory
+specs, entry points, and focused source modules. If a focus term is supplied,
+such as `client`, bot, worker, API, parser, billing, or another component or
+workflow name, the agent searches for that focus before broad scans. It extracts
+portable behavior contracts and module responsibilities before editing code;
+it does not blindly copy another project's source or machine-specific config.
+
+When implementation is requested or clearly implied, the agent adapts the
+logic into the current project's architecture and configuration boundaries,
+updates durable project memory with source/evidence mapping, and runs the
+smallest documented checks that cover the adopted behavior. If the source is a
+web URL, prefer official repository/docs pages and avoid crawling unrelated
+pages or downloading large assets unless the user asks for that scope.
 
 ### Build/Rebuild Project
 

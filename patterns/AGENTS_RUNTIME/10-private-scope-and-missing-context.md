@@ -9,6 +9,15 @@
   them. If the current root's identity does not match the requested product or
   target path, stop and warn before reading or writing files there unless the
   user explicitly named that external path and action in the current message.
+- For `gi logic <source> [focus]` / `ги логика <source> [focus]`, the named
+  URL, repository, or local folder is explicit permission to inspect that source
+  for the logic-adoption task only. Keep the current project as the write
+  target unless the user explicitly says to modify the source project. Read
+  external files narrowly: start with instructions, README/docs, manifests,
+  project-memory specs, entry points, and focused module searches. Do not read
+  secrets, private runtime data, logs, databases, user-home app data, generated
+  artifacts, or unrelated sibling repositories. Record the source path or URL
+  and the evidence used when writing current-project memory or adapting code.
 - Treat user-home application data and personal telemetry as private external
   sources. Do not read `.codex`, `.cursor`, IDE logs, browser profiles, shell
   history, application SQLite databases, or local app logs outside the project

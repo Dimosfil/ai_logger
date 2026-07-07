@@ -4,6 +4,13 @@ Accepted changes for the shared instruction library.
 
 ## 2026.07.07
 
+- Added `gi logic` / `ги логика` for project-logic recovery and adoption. With
+  no source, agents build or update the current project's durable logic map; with
+  an explicit URL, repository, or local folder plus optional focus term, agents
+  narrowly inspect that source, extract portable behavior contracts, adapt them
+  into the current project only, update project memory, and avoid secrets,
+  private runtime data, generated artifacts, and blind source copying.
+
 - Clarified `gi init` from GitHub source links. Agents must treat
   `gi init https://github.com/Dimosfil/general-instructions.git`,
   `gi init Dimosfil/general-instructions.git`, and Markdown links to that repo

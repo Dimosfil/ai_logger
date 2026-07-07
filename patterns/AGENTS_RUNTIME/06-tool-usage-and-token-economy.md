@@ -76,6 +76,25 @@
   dependencies, start services, rebuild indexes, call external APIs, read
   secrets, or inspect private paths outside the project root for this command
   unless the user explicitly approves that scope.
+- Treat `gi logic`, `ги логика`, and `gi logic <source> [focus]` as requests
+  to recover, document, or adapt project logic through GI project memory. With
+  no source, inspect the current project only and build or update the durable
+  logic map: core domain modules, workflow contracts, invariants, data flows,
+  integration boundaries, and verification evidence, preferably under
+  `tools/project-memory/specs/`. With an explicit URL, repository, or local
+  folder, first read the private-scope rules in
+  `patterns/AGENTS_RUNTIME/10-private-scope-and-missing-context.md`, state the
+  active project root and external source, then study only task-relevant
+  instructions, README/docs, manifests, project-memory specs, entry points, and
+  focused source modules. If the user supplies a focus term such as a component,
+  role, client, bot, worker, API, or workflow name, search for that focus before
+  broad scans. Extract portable behavior contracts and module responsibilities
+  before editing code; do not blindly copy another project's source, secrets,
+  generated artifacts, local config, or private data. If implementation is
+  requested or clearly implied, adapt the relevant logic into the current
+  project's architecture and configuration boundaries, update project memory
+  with source/evidence mapping, and run the smallest documented checks that
+  cover the adopted behavior.
 - Do not read large files in full by default, including large `index.html`,
   bundled JS/CSS, logs, lockfiles, generated files, and build artifacts. Prefer
   targeted searches, heads, tails, or small line ranges, such as
