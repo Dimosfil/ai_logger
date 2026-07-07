@@ -24,8 +24,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--provider",
-        default=os.environ.get("AI_LOGGER_LLM_PROVIDER") or os.environ.get("LLM_PROVIDER") or "deepseek",
-        help="LLM provider: deepseek, openai-compatible, mock, local, or none.",
+        default=os.environ.get("AI_LOGGER_LLM_PROVIDER") or os.environ.get("LLM_PROVIDER") or "codex",
+        help="LLM provider: codex, deepseek, openai-compatible, mock, local, or none.",
     )
     parser.add_argument("--no-llm", action="store_true", help="Use local lexical ranking only.")
     parser.add_argument("--max-records", type=int, default=int(os.environ.get("AI_LOGGER_LOG_SEARCH_MAX_RECORDS", "500")))

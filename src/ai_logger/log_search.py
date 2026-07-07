@@ -24,6 +24,7 @@ class LogSearchLlmProvider(Protocol):
         candidates: list["LogSearchCandidate"],
         *,
         top_k: int,
+        response_language: str = "en",
     ) -> "LlmLogSearchAnalysis":
         ...
 
@@ -109,15 +110,21 @@ class StructuredLlmLogSearchProvider:
         candidates: list[LogSearchCandidate],
         *,
         top_k: int,
+        response_language: str = "en",
     ) -> LlmLogSearchAnalysis:
+        language_name = response_language_name(response_language)
         system_prompt = (
             "You analyze structured application logs. Return only JSON with "
             'shape {"summary": string, "matches": [{"id": string, "reason": string}]}. '
-            "Choose records that best explain the user's problem. Do not invent ids."
+            f"Write the summary and match reasons in {language_name}. "
+            "The summary is the bot answer for the user: explain what likely happened, "
+            "what looks broken or suspicious, and what evidence is missing when the logs "
+            "are inconclusive. Choose records that best support the answer. Do not invent ids."
         )
         user_prompt = json.dumps(
             {
                 "problem": query,
+                "response_language": normalize_response_language(response_language),
                 "top_k": top_k,
                 "candidate_logs": [compact_candidate(candidate) for candidate in candidates],
             },
@@ -161,6 +168,7 @@ class SmartLogSearcher:
         max_records: int = 500,
         candidate_count: int = 30,
         top_k: int = 5,
+        response_language: str = "en",
     ) -> LogSearchResult:
         records = self.source.read_recent(max_records=max_records)
         candidates = rank_candidates(query, records)[: max(candidate_count, top_k)]
@@ -185,7 +193,12 @@ class SmartLogSearcher:
             )
 
         try:
-            analysis = self.llm_provider.analyze(query, candidates, top_k=top_k)
+            analysis = self.llm_provider.analyze(
+                query,
+                candidates,
+                top_k=top_k,
+                response_language=response_language,
+            )
         except LlmProviderError as exc:
             return LogSearchResult(
                 query=query,
@@ -255,6 +268,17 @@ def build_local_summary(query: str, matches: list[LogSearchMatch]) -> str:
         return "No matching log records found."
     levels = ", ".join(sorted({match.record.level.name for match in matches}))
     return f"Found {len(matches)} candidate log record(s) for '{query}' using local ranking. Levels: {levels}."
+
+
+def normalize_response_language(value: str | None) -> str:
+    language = (value or "").strip().lower()
+    if language in {"ru", "rus", "russian", "ru-ru"}:
+        return "ru"
+    return "en"
+
+
+def response_language_name(value: str | None) -> str:
+    return "Russian" if normalize_response_language(value) == "ru" else "English"
 
 
 def compact_candidate(candidate: LogSearchCandidate) -> dict[str, Any]:

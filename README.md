@@ -52,11 +52,12 @@ The helper `configured_logger()` can build plugins from environment variables:
 description. It first finds a local candidate set, then optionally asks an LLM
 provider to rank the candidates and summarize the likely issue.
 
-DeepSeek remains the default provider:
+Codex app-server is the default provider:
 
 ```powershell
 $env:AI_LOGGER_SERVER_JSONL_PATH = "logs/server.jsonl"
-$env:DEEPSEEK_API_KEY = "<secret>"
+$env:AI_LOGGER_LLM_PROVIDER = "codex"
+$env:AI_LOGGER_CODEX_MODEL = "gpt-codex-spark-high"
 ai-logger-log-search "authorization fails after deploy"
 ```
 
@@ -80,8 +81,11 @@ ai-logger-log-search "authorization fails after deploy" --no-llm
 Main LLM environment variables:
 
 - `AI_LOGGER_LOG_SEARCH_JSONL_PATH`, or fallback `AI_LOGGER_SERVER_JSONL_PATH`;
-- `AI_LOGGER_LLM_PROVIDER` or `LLM_PROVIDER`: `deepseek`,
+- `AI_LOGGER_LLM_PROVIDER` or `LLM_PROVIDER`: `codex`, `deepseek`,
   `openai-compatible`, `mock`, `local`, or `none`;
+- `AI_LOGGER_CODEX_MODEL` or `CODEX_MODEL`, default
+  `gpt-codex-spark-high`;
+- `AI_LOGGER_CODEX_COMMAND` or `CODEX_COMMAND`, optional Codex command path;
 - `DEEPSEEK_API_KEY` or `AI_LOGGER_DEEPSEEK_API_KEY`;
 - `AI_LOGGER_DEEPSEEK_MODEL`, default `deepseek-v4-flash`;
 - `AI_LOGGER_DEEPSEEK_BASE_URL`, default `https://api.deepseek.com`.

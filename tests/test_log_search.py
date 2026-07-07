@@ -10,6 +10,8 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from ai_logger import (  # noqa: E402
+    CodexAppServerChatClient,
+    CodexAppServerOptions,
     DeepSeekChatClient,
     DeepSeekLogSearchProvider,
     DeepSeekOptions,
@@ -22,7 +24,10 @@ from ai_logger import (  # noqa: E402
     OpenAiCompatibleOptions,
     SmartLogSearcher,
 )
-from ai_logger.log_search_providers import create_log_search_llm_provider  # noqa: E402
+from ai_logger.log_search_providers import (  # noqa: E402
+    create_log_search_llm_provider,
+    normalize_log_search_provider,
+)
 from ai_logger.log_search import LlmLogSearchAnalysis  # noqa: E402
 from ai_logger.log_search_cli import main as log_search_main  # noqa: E402
 
@@ -30,10 +35,11 @@ from ai_logger.log_search_cli import main as log_search_main  # noqa: E402
 class _FakeSearchProvider:
     name = "fake"
 
-    def analyze(self, query, candidates, *, top_k):
+    def analyze(self, query, candidates, *, top_k, response_language="en"):
         self.query = query
         self.candidates = candidates
         self.top_k = top_k
+        self.response_language = response_language
         return LlmLogSearchAnalysis(
             summary="Authorization failures are clustered in the API service.",
             matches=[
@@ -177,6 +183,37 @@ class LogSearchTests(unittest.TestCase):
         self.assertEqual(payload["max_tokens"], 111)
         self.assertEqual(result["matches"][0]["id"], "worker-1")
 
+    def test_codex_app_server_client_parses_json_from_runner(self) -> None:
+        prompts = []
+
+        def fake_runner(prompt, options):
+            prompts.append((prompt, options))
+            return json.dumps(
+                {
+                    "summary": "Codex found the failing request.",
+                    "matches": [{"id": "abc", "reason": "stack trace points to auth"}],
+                }
+            )
+
+        client = CodexAppServerChatClient(
+            CodexAppServerOptions(command="codex.cmd", model="gpt-codex-spark-high"),
+            runner=fake_runner,
+        )
+        result = client.complete_json("system", "user")
+
+        self.assertIn("Return only valid JSON", prompts[0][0])
+        self.assertEqual(prompts[0][1].model, "gpt-codex-spark-high")
+        self.assertEqual(result["summary"], "Codex found the failing request.")
+        self.assertEqual(result["matches"][0]["id"], "abc")
+
+    def test_codex_app_server_client_accepts_fenced_json(self) -> None:
+        client = CodexAppServerChatClient(
+            CodexAppServerOptions(command="codex.cmd"),
+            runner=lambda _prompt, _options: '```json\n{"summary":"ok","matches":[]}\n```',
+        )
+
+        self.assertEqual(client.complete_json("system", "user")["summary"], "ok")
+
     def test_deepseek_log_search_provider_formats_candidates(self) -> None:
         class FakeClient:
             def complete_json(self, system_prompt, user_prompt):
@@ -204,6 +241,26 @@ class LogSearchTests(unittest.TestCase):
         self.assertEqual(result.matches[0].reason, "best")
         self.assertIn("[REDACTED]", provider.client.user_prompt)
         self.assertNotIn("secret", provider.client.user_prompt)
+
+    def test_llm_log_search_provider_includes_response_language(self) -> None:
+        class FakeClient:
+            def complete_json(self, system_prompt, user_prompt):
+                self.system_prompt = system_prompt
+                self.user_prompt = user_prompt
+                return {"summary": "Проблема найдена.", "matches": []}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "server.jsonl"
+            Logger("api", LogAggregator([DiskJsonLinesPlugin(path)])).error("token rejected")
+            provider = DeepSeekLogSearchProvider(FakeClient())
+            SmartLogSearcher(JsonlLogSource(path), llm_provider=provider).search(
+                "token rejected",
+                response_language="ru",
+            )
+
+        payload = json.loads(provider.client.user_prompt)
+        self.assertIn("Russian", provider.client.system_prompt)
+        self.assertEqual(payload["response_language"], "ru")
 
     def test_cli_can_run_local_json_output_without_api_key(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -238,6 +295,10 @@ class LogSearchTests(unittest.TestCase):
 
         self.assertIsNotNone(provider)
         self.assertEqual(provider.name, "mock")
+
+    def test_provider_registry_normalizes_codex_alias(self) -> None:
+        self.assertEqual(normalize_log_search_provider(""), "codex")
+        self.assertEqual(normalize_log_search_provider("codex-app-server"), "codex")
 
     def test_cli_can_use_mock_provider_for_search_line(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

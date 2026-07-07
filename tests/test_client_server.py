@@ -73,6 +73,9 @@ class ClientServerTests(unittest.TestCase):
 
         self.assertIn("<title>ai_logger</title>", html)
         self.assertIn("Ask AI about these logs", html)
+        self.assertIn("Bot answer", html)
+        self.assertIn('id="uiLanguageSelect"', html)
+        self.assertIn('id="llmLanguageSelect"', html)
 
     def test_web_api_lists_projects_files_and_logs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -117,6 +120,59 @@ class ClientServerTests(unittest.TestCase):
         self.assertEqual(overview["files"][0]["name"], "2026-07-07.jsonl")
         self.assertEqual(len(logs["records"]), 1)
         self.assertEqual(logs["records"][0]["message"], "failed")
+
+    def test_web_log_repository_returns_newest_records_first(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "logs"
+            project_dir = root / "alpha"
+            project_dir.mkdir(parents=True)
+            (project_dir / "2026-07-07.jsonl").write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "timestamp": "2026-07-07T12:00:00+00:00",
+                                "logger": "alpha.worker",
+                                "level": "INFO",
+                                "message": "oldest",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "timestamp": "2026-07-07T12:00:30+00:00",
+                                "logger": "alpha.worker",
+                                "level": "INFO",
+                                "message": "same-second-first",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "timestamp": "2026-07-07T12:00:30+00:00",
+                                "logger": "alpha.worker",
+                                "level": "INFO",
+                                "message": "same-second-newer",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "timestamp": "2026-07-07T12:01:00+00:00",
+                                "logger": "alpha.worker",
+                                "level": "INFO",
+                                "message": "newest",
+                            }
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            records = WebLogRepository(root).read_records(project="alpha", limit=3)
+
+        self.assertEqual(
+            [record.message for record in records],
+            ["newest", "same-second-newer", "same-second-first"],
+        )
 
     def test_web_search_uses_local_fallback_without_llm_key(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -218,6 +274,82 @@ class ClientServerTests(unittest.TestCase):
 
         self.assertEqual(result["provider"], "mock")
         self.assertEqual(result["summary"], "Mock web analysis.")
+
+    def test_web_search_sends_recent_logs_to_llm_when_local_search_has_no_matches(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "logs"
+            project_dir = root / "alpha"
+            project_dir.mkdir(parents=True)
+            (project_dir / "2026-07-07.jsonl").write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "timestamp": "2026-07-07T12:00:00+00:00",
+                                "logger": "alpha.worker",
+                                "level": "INFO",
+                                "message": "chat_scan_start",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "timestamp": "2026-07-07T12:01:00+00:00",
+                                "logger": "alpha.worker",
+                                "level": "INFO",
+                                "message": "chats_persisted",
+                            }
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            server = create_server(
+                "127.0.0.1",
+                0,
+                aggregator=LogAggregator(),
+                web_logs=WebLogRepository(root),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = server.server_address
+                body = json.dumps(
+                    {
+                        "query": "What broke in the bot?",
+                        "project": "alpha",
+                        "provider": "mock",
+                        "response_language": "ru",
+                        "top_k": 1,
+                    }
+                ).encode("utf-8")
+                http_request = request.Request(
+                    f"http://{host}:{port}/api/search",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with patch.dict(
+                    "os.environ",
+                    {
+                        "AI_LOGGER_LLM_MOCK_RESPONSE": json.dumps(
+                            {"summary": "Mock bot answer from recent logs."}
+                        )
+                    },
+                    clear=False,
+                ):
+                    with request.urlopen(http_request, timeout=5) as response:
+                        result = json.loads(response.read().decode("utf-8"))
+            finally:
+                server.shutdown()
+                thread.join(timeout=3)
+                server.server_close()
+
+        self.assertEqual(result["provider"], "mock")
+        self.assertEqual(result["response_language"], "ru")
+        self.assertEqual(result["summary"], "Mock bot answer from recent logs.")
+        self.assertEqual(result["matches"][0]["record"]["message"], "chats_persisted")
+        self.assertEqual(result["matches"][0]["reason"], "mock")
 
     def test_client_plugin_sends_records_to_ingest_server(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

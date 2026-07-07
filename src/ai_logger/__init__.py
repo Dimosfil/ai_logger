@@ -12,6 +12,8 @@ from .config import (
 from .context import catch_and_log, log_exceptions
 from .levels import LogLevel
 from .llm import (
+    CodexAppServerChatClient,
+    CodexAppServerOptions,
     DeepSeekChatClient,
     DeepSeekOptions,
     LlmProviderError,
@@ -49,6 +51,8 @@ __all__ = [
     "AiLoggerClient",
     "AiLoggerClientOptions",
     "AiLoggerHttpHandler",
+    "CodexAppServerChatClient",
+    "CodexAppServerOptions",
     "ClickHouseHttpPlugin",
     "DeepSeekChatClient",
     "DeepSeekLogSearchProvider",

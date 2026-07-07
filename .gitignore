@@ -13,6 +13,7 @@ tools/deploy/ftp.local.json
 tools/deploy/prod.local.json
 tools/deploy/deploy-gateway.local.json
 deploy/windows/env.local.ps1
+deploy/windows/*.local.ps1
 deploy/graylog/.env
 deploy/graylog/*.local.ps1
 *.log

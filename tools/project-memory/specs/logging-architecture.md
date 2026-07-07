@@ -112,9 +112,18 @@ reads JSON Lines logs from `AI_LOGGER_WEB_LOGS_ROOT`, then falls back through
 `AI_LOGGER_QUERY_LOGS_PATH`, `AI_LOGGER_SERVER_PROJECT_DAILY_DIR`,
 `AI_LOGGER_SERVER_JSONL_PATH`, and `logs`. Project folders follow the
 `ProjectDailyJsonLinesPlugin` layout: `<root>/<project>/YYYY-MM-DD.jsonl`.
+The `/api/logs` read order is newest first, with later records from the same
+timestamp displayed above earlier records.
 When no DeepSeek key is configured, `/api/search` must keep working through
 bounded local candidate ranking and return a warning instead of exposing or
 requesting a secret in the browser.
+The web search response is a two-part inspection result: `summary` is the bot
+answer shown above the table, and `matches` are the supporting log rows shown
+below it. When text ranking finds no local candidates but recent records exist
+for the selected project/file/level scope, `/api/search` may send those recent
+records to the configured LLM provider so questions such as "what broke in this
+bot?" still receive an evidence-backed answer instead of stopping at an empty
+local search result.
 
 `LogIngestHttpServer` is the server-side entry point. It accepts JSON
 `LogRecord` payloads at `/ingest`, optionally verifies a bearer token, restores
@@ -178,14 +187,16 @@ only the bounded candidate set to an LLM provider. This keeps large log files
 out of provider requests and gives deterministic fallback behavior when the LLM
 is unavailable.
 
-DeepSeek remains the default provider. The search layer also supports the
-reusable `llm_providers` provider naming contract: `deepseek`,
-`openai-compatible`, `mock`, `local`, and `none`. DeepSeek keys are read from
-`DEEPSEEK_API_KEY` or `AI_LOGGER_DEEPSEEK_API_KEY`; generic OpenAI-compatible
-keys are read from `AI_LOGGER_LLM_API_KEY` or `LLM_API_KEY`. Keys must not be
-persisted in source, documentation examples, project memory, logs, or search
-output. Model, base URL, timeout, thinking mode, token cap, candidate count,
-top-K, and JSONL path are configuration values, not code constants.
+Codex app-server is the default provider, using model
+`gpt-codex-spark-high` unless `AI_LOGGER_CODEX_MODEL` or `CODEX_MODEL`
+overrides it. The search layer also supports the reusable `llm_providers`
+provider naming contract: `codex`, `deepseek`, `openai-compatible`, `mock`,
+`local`, and `none`. DeepSeek keys are read from `DEEPSEEK_API_KEY` or
+`AI_LOGGER_DEEPSEEK_API_KEY`; generic OpenAI-compatible keys are read from
+`AI_LOGGER_LLM_API_KEY` or `LLM_API_KEY`. Keys must not be persisted in source,
+documentation examples, project memory, logs, or search output. Model, base
+URL, timeout, thinking mode, token cap, candidate count, top-K, and JSONL path
+are configuration values, not code constants.
 
 Provider integration is behind `LogSearchLlmProvider`. Future providers should
 implement the same query/candidate analysis contract and preserve the local
@@ -193,7 +204,7 @@ candidate-ranking fallback.
 
 The web UI natural-language search box uses the same provider registry as the
 CLI. Users can leave provider selection on automatic environment-driven routing
-or choose `deepseek`, `openai-compatible`, `mock`, or `local` for a single
+or choose `codex`, `deepseek`, `openai-compatible`, `mock`, or `local` for a single
 `/api/search` request. Search responses include the actual provider, warnings,
 selected records, scores, and LLM/local reasons so the answer remains
 evidence-backed.

@@ -4,6 +4,7 @@ import os
 from typing import Mapping
 
 from .llm import (
+    CodexAppServerChatClient,
     DeepSeekChatClient,
     LlmProviderError,
     MockChatClient,
@@ -23,9 +24,13 @@ def normalize_log_search_provider(value: str | None) -> str:
         return "mock"
     if provider in {"openai-compatible", "openai", "compatible"}:
         return "openai-compatible"
-    if provider in {"deepseek", ""}:
+    if provider in {"codex", "codex-app-server", "app-server"}:
+        return "codex"
+    if provider == "deepseek":
         return "deepseek"
-    return "deepseek"
+    if provider == "":
+        return "codex"
+    return "codex"
 
 
 def create_log_search_llm_provider(
@@ -46,6 +51,8 @@ def create_log_search_llm_provider(
             "openai-compatible",
             OpenAiCompatibleChatClient.from_env(env),
         )
+    if provider == "codex":
+        return StructuredLlmLogSearchProvider("codex", CodexAppServerChatClient.from_env(env))
     if provider == "deepseek":
         return StructuredLlmLogSearchProvider("deepseek", DeepSeekChatClient.from_env(env))
     raise LlmProviderError(f"Unsupported LLM provider: {provider_name}")

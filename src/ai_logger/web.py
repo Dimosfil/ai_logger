@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .llm import LlmProviderError
-from .log_search import LogSearchMatch, rank_candidates
+from .log_search import (
+    LogSearchCandidate,
+    LogSearchMatch,
+    normalize_response_language,
+    rank_candidates,
+)
 from .log_search_providers import create_log_search_llm_provider, normalize_log_search_provider
 from .records import LogRecord
 
@@ -91,9 +96,16 @@ class WebLogRepository:
         records: list[LogRecord] = []
         for file_ref in selected:
             records.extend(_read_jsonl_records(file_ref.path, levels=levels, text=needle))
-        records.sort(key=lambda record: record.timestamp)
+        records = [
+            record
+            for _index, record in sorted(
+                enumerate(records),
+                key=lambda item: (item[1].timestamp, item[0]),
+                reverse=True,
+            )
+        ]
         if limit > 0:
-            return records[-limit:]
+            return records[:limit]
         return records
 
     def search(
@@ -107,14 +119,23 @@ class WebLogRepository:
         top_k: int = 8,
         use_llm: bool = True,
         provider_name: str | None = None,
+        response_language: str = "en",
     ) -> dict[str, Any]:
+        normalized_language = normalize_response_language(response_language)
         records = self.read_records(
             project=project,
             file_name=file_name,
             levels=levels,
             limit=max_records,
         )
+        candidate_count = int(os.environ.get("AI_LOGGER_LOG_SEARCH_CANDIDATES", "30"))
         candidates = rank_candidates(query, records)
+        llm_candidates = candidates[: max(candidate_count, top_k)]
+        if not llm_candidates:
+            llm_candidates = [
+                LogSearchCandidate(record=record, score=0.0)
+                for record in records[: max(candidate_count, top_k)]
+            ]
         matches = [
             LogSearchMatch(record=candidate.record, score=candidate.score)
             for candidate in candidates[:top_k]
@@ -123,19 +144,19 @@ class WebLogRepository:
         warnings: list[str] = []
         summary = _local_summary(query, matches)
 
-        if use_llm and candidates:
+        if use_llm and llm_candidates:
             try:
-                candidate_count = int(os.environ.get("AI_LOGGER_LOG_SEARCH_CANDIDATES", "30"))
                 llm_provider = create_log_search_llm_provider(provider_name)
                 if llm_provider:
                     analysis = llm_provider.analyze(
                         query,
-                        candidates[: max(candidate_count, top_k)],
+                        llm_candidates,
                         top_k=top_k,
+                        response_language=normalized_language,
                     )
                     provider = llm_provider.name
                     summary = analysis.summary
-                    matches = _matches_from_llm(analysis.matches, candidates, top_k)
+                    matches = _matches_from_llm(analysis.matches, llm_candidates, top_k)
             except LlmProviderError as exc:
                 warnings.append(str(exc))
 
@@ -144,6 +165,7 @@ class WebLogRepository:
             "summary": summary,
             "provider": provider,
             "requested_provider": normalize_log_search_provider(provider_name),
+            "response_language": normalized_language,
             "warnings": warnings,
             "matches": [
                 {
@@ -284,7 +306,7 @@ INDEX_HTML = r"""<!doctype html>
     .meta { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
     .main { padding: 18px; min-width: 0; }
     .toolbar { display: grid; grid-template-columns: minmax(240px, 1fr) 132px; gap: 12px; align-items: center; margin-bottom: 14px; }
-    .search { display: grid; grid-template-columns: minmax(0, 1fr) 172px 96px; gap: 8px; }
+    .search { display: grid; grid-template-columns: minmax(0, 1fr) 172px 112px 112px 96px; gap: 8px; }
     input, select { width: 100%; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 9px 10px; color: var(--text); }
     button { border: 1px solid var(--line); background: #fff; color: var(--text); border-radius: 6px; padding: 9px 12px; cursor: pointer; }
     button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
@@ -301,10 +323,11 @@ INDEX_HTML = r"""<!doctype html>
     .level.INFO.active { background: var(--info); }
     .level.WARNING.active { background: var(--warn); }
     .level.ERROR.active, .level.CRITICAL.active { background: var(--danger); }
-    .summary { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 12px; margin-bottom: 14px; display: none; }
+    .summary { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 14px; margin-bottom: 14px; display: none; }
     .summary.visible { display: block; }
-    .summary strong { display: block; margin-bottom: 4px; }
+    .summary strong { display: block; margin-bottom: 6px; }
     .summary .provider { color: var(--accent); }
+    .bot-answer { white-space: pre-wrap; line-height: 1.45; }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
     .log-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: block; }
     .log-table thead, .log-table tbody, .log-table tr { display: table; width: 100%; table-layout: fixed; }
@@ -339,9 +362,9 @@ INDEX_HTML = r"""<!doctype html>
         <button id="refreshBtn" title="Refresh">Refresh</button>
       </div>
       <div id="rootMeta" class="meta"></div>
-      <div class="section-title">Projects</div>
+      <div class="section-title" data-i18n="projects">Projects</div>
       <div id="projectList" class="list"></div>
-      <div class="section-title">Log files</div>
+      <div class="section-title" data-i18n="logFiles">Log files</div>
       <div id="fileList" class="list"></div>
     </aside>
     <main class="main">
@@ -349,11 +372,20 @@ INDEX_HTML = r"""<!doctype html>
         <div class="search">
           <input id="aiQuery" type="search" placeholder="Ask AI about these logs">
           <select id="providerSelect" title="LLM provider">
-            <option value="">Auto provider</option>
+            <option id="providerAutoOption" value="">Auto provider</option>
             <option value="deepseek">DeepSeek</option>
-            <option value="openai-compatible">OpenAI-compatible</option>
-            <option value="mock">Mock</option>
-            <option value="local">Local only</option>
+            <option id="providerCodexOption" value="codex">Codex app-server</option>
+            <option id="providerOpenAiOption" value="openai-compatible">OpenAI-compatible</option>
+            <option id="providerMockOption" value="mock">Mock</option>
+            <option id="providerLocalOption" value="local">Local only</option>
+          </select>
+          <select id="uiLanguageSelect" title="Interface language">
+            <option value="en">UI EN</option>
+            <option value="ru">UI RU</option>
+          </select>
+          <select id="llmLanguageSelect" title="LLM answer language">
+            <option value="en">LLM EN</option>
+            <option value="ru">LLM RU</option>
           </select>
           <button id="askBtn" class="primary">Ask</button>
         </div>
@@ -369,8 +401,76 @@ INDEX_HTML = r"""<!doctype html>
     </main>
   </div>
   <script>
-    const state = { overview: null, project: "", file: "", levels: new Set(), query: "" };
+    const translations = {
+      en: {
+        refresh: "Refresh",
+        projects: "Projects",
+        logFiles: "Log files",
+        allProjects: "All projects",
+        missing: "Missing",
+        askPlaceholder: "Ask AI about these logs",
+        providerTitle: "LLM provider",
+        autoProvider: "Auto provider",
+        codexProvider: "Codex app-server",
+        openaiProvider: "OpenAI-compatible",
+        mockProvider: "Mock",
+        localProvider: "Local only",
+        uiLanguageTitle: "Interface language",
+        llmLanguageTitle: "LLM answer language",
+        ask: "Ask",
+        asking: "Asking",
+        botAnswer: "Bot answer",
+        analyzing: "Analyzing selected logs...",
+        recordLimitTitle: "Record limit",
+        rows: "rows",
+        clear: "Clear",
+        noRecords: "No log records found for the current filters.",
+        noMatches: "No search matches found.",
+        time: "Time",
+        level: "Level",
+        logger: "Logger",
+        message: "Message"
+      },
+      ru: {
+        refresh: "Обновить",
+        projects: "Проекты",
+        logFiles: "Файлы логов",
+        allProjects: "Все проекты",
+        missing: "Нет пути",
+        askPlaceholder: "Спросить ИИ об этих логах",
+        providerTitle: "Провайдер LLM",
+        autoProvider: "Авто провайдер",
+        codexProvider: "Codex app-server",
+        openaiProvider: "OpenAI-compatible",
+        mockProvider: "Mock",
+        localProvider: "Только локально",
+        uiLanguageTitle: "Язык интерфейса",
+        llmLanguageTitle: "Язык ответа LLM",
+        ask: "Спросить",
+        asking: "Запрос",
+        botAnswer: "Ответ бота",
+        analyzing: "Анализ выбранных логов...",
+        recordLimitTitle: "Лимит записей",
+        rows: "строк",
+        clear: "Сброс",
+        noRecords: "Записи логов не найдены для текущих фильтров.",
+        noMatches: "Совпадения поиска не найдены.",
+        time: "Время",
+        level: "Уровень",
+        logger: "Логгер",
+        message: "Сообщение"
+      }
+    };
+    function normalizeUiLanguage(value) {
+      return value === "ru" ? "ru" : "en";
+    }
+    const savedUiLanguage = localStorage.getItem("ai_logger_ui_language");
+    const defaultUiLanguage = normalizeUiLanguage(
+      savedUiLanguage || ((navigator.language || "").toLowerCase().startsWith("ru") ? "ru" : "en")
+    );
+    const state = { overview: null, project: "", file: "", levels: new Set(), uiLanguage: defaultUiLanguage };
     const el = (id) => document.getElementById(id);
+    const t = (key) => (translations[state.uiLanguage] || translations.en)[key] || translations.en[key] || key;
 
     async function api(path, options) {
       const response = await fetch(path, options);
@@ -399,13 +499,36 @@ INDEX_HTML = r"""<!doctype html>
       return all.filter((item) => !state.project || item.project === state.project);
     }
 
+    function applyLanguage() {
+      document.documentElement.lang = state.uiLanguage;
+      el("refreshBtn").textContent = t("refresh");
+      document.querySelector("[data-i18n='projects']").textContent = t("projects");
+      document.querySelector("[data-i18n='logFiles']").textContent = t("logFiles");
+      el("aiQuery").placeholder = t("askPlaceholder");
+      el("providerSelect").title = t("providerTitle");
+      el("providerAutoOption").textContent = t("autoProvider");
+      el("providerCodexOption").textContent = t("codexProvider");
+      el("providerOpenAiOption").textContent = t("openaiProvider");
+      el("providerMockOption").textContent = t("mockProvider");
+      el("providerLocalOption").textContent = t("localProvider");
+      el("uiLanguageSelect").title = t("uiLanguageTitle");
+      el("llmLanguageSelect").title = t("llmLanguageTitle");
+      if (!el("askBtn").disabled) {
+        el("askBtn").textContent = t("ask");
+      }
+      el("limitSelect").title = t("recordLimitTitle");
+      for (const option of el("limitSelect").options) {
+        option.textContent = `${option.value} ${t("rows")}`;
+      }
+    }
+
     function renderSidebar() {
-      el("rootMeta").textContent = state.overview.exists ? state.overview.root : `Missing: ${state.overview.root}`;
+      el("rootMeta").textContent = state.overview.exists ? state.overview.root : `${t("missing")}: ${state.overview.root}`;
       const projects = state.overview.projects;
       el("projectList").innerHTML = "";
       const allButton = document.createElement("button");
       allButton.className = state.project === "" ? "active" : "";
-      allButton.innerHTML = `<span>All projects</span><span class="count">${projects.length}</span>`;
+      allButton.innerHTML = `<span>${t("allProjects")}</span><span class="count">${projects.length}</span>`;
       allButton.onclick = () => { state.project = ""; state.file = ""; render(); loadLogs(); };
       el("projectList").appendChild(allButton);
       projects.forEach((project) => {
@@ -440,12 +563,14 @@ INDEX_HTML = r"""<!doctype html>
         el("levelFilters").appendChild(button);
       });
       const clear = document.createElement("button");
-      clear.textContent = "Clear";
+      clear.textContent = t("clear");
       clear.onclick = () => { state.levels.clear(); render(); loadLogs(); };
       el("levelFilters").appendChild(clear);
     }
 
     function render() {
+      applyLanguage();
+      if (!state.overview) return;
       renderSidebar();
       renderLevels();
     }
@@ -482,22 +607,22 @@ INDEX_HTML = r"""<!doctype html>
 
     function renderRecords(records) {
       if (!records.length) {
-        el("content").innerHTML = `<div class="empty">No log records found for the current filters.</div>`;
+        el("content").innerHTML = `<div class="empty">${t("noRecords")}</div>`;
         return;
       }
       el("content").innerHTML = `<table class="log-table">
-        <thead><tr><th>Time</th><th>Level</th><th>Logger</th><th>Message</th></tr></thead>
+        <thead><tr><th>${t("time")}</th><th>${t("level")}</th><th>${t("logger")}</th><th>${t("message")}</th></tr></thead>
         <tbody>${records.map(recordRow).join("")}</tbody>
       </table>`;
     }
 
     function renderSearchMatches(matches) {
       if (!matches.length) {
-        el("content").innerHTML = `<div class="empty">No search matches found.</div>`;
+        el("content").innerHTML = `<div class="empty">${t("noMatches")}</div>`;
         return;
       }
       el("content").innerHTML = `<table class="log-table">
-        <thead><tr><th>Time</th><th>Level</th><th>Logger</th><th>Message</th></tr></thead>
+        <thead><tr><th>${t("time")}</th><th>${t("level")}</th><th>${t("logger")}</th><th>${t("message")}</th></tr></thead>
         <tbody>${matches.map((match) => recordRow(match.record, match)).join("")}</tbody>
       </table>`;
     }
@@ -506,7 +631,9 @@ INDEX_HTML = r"""<!doctype html>
       const query = el("aiQuery").value.trim();
       if (!query) return;
       el("askBtn").disabled = true;
-      el("askBtn").textContent = "Asking";
+      el("askBtn").textContent = t("asking");
+      el("summary").className = "summary visible";
+      el("summary").innerHTML = `<strong>${t("botAnswer")}</strong><div class="bot-answer">${t("analyzing")}</div>`;
       try {
         const payload = await api("/api/search", {
           method: "POST",
@@ -518,18 +645,19 @@ INDEX_HTML = r"""<!doctype html>
             levels: Array.from(state.levels),
             max_records: Number(el("limitSelect").value),
             top_k: 8,
-            provider: el("providerSelect").value || null
+            provider: el("providerSelect").value || null,
+            response_language: el("llmLanguageSelect").value || "en"
           })
         });
         el("summary").className = "summary visible";
         const warning = payload.warnings.length ? `<div class="meta">${html(payload.warnings.join("; "))}</div>` : "";
-        el("summary").innerHTML = `<strong><span class="provider">${html(payload.provider)}</span> analysis</strong><div>${html(payload.summary)}</div>${warning}`;
+        el("summary").innerHTML = `<strong>${t("botAnswer")} <span class="provider">(${html(payload.provider)})</span></strong><div class="bot-answer">${html(payload.summary)}</div>${warning}`;
         renderSearchMatches(payload.matches);
       } catch (error) {
         renderError(error.message);
       } finally {
         el("askBtn").disabled = false;
-        el("askBtn").textContent = "Ask";
+        el("askBtn").textContent = t("ask");
       }
     }
 
@@ -547,10 +675,21 @@ INDEX_HTML = r"""<!doctype html>
       }
     }
 
+    el("uiLanguageSelect").value = state.uiLanguage;
+    el("llmLanguageSelect").value = normalizeUiLanguage(localStorage.getItem("ai_logger_llm_language") || state.uiLanguage);
     el("refreshBtn").onclick = loadOverview;
     el("askBtn").onclick = askAi;
     el("aiQuery").addEventListener("keydown", (event) => { if (event.key === "Enter") askAi(); });
     el("limitSelect").onchange = loadLogs;
+    el("uiLanguageSelect").onchange = () => {
+      state.uiLanguage = normalizeUiLanguage(el("uiLanguageSelect").value);
+      localStorage.setItem("ai_logger_ui_language", state.uiLanguage);
+      render();
+      if (state.overview) loadLogs();
+    };
+    el("llmLanguageSelect").onchange = () => {
+      localStorage.setItem("ai_logger_llm_language", el("llmLanguageSelect").value);
+    };
     loadOverview();
   </script>
 </body>

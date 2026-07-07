@@ -61,24 +61,69 @@ without binding search behavior to DeepSeek-specific code.
 Current `ai_logger` smart search has a narrower Python protocol:
 `LogSearchLlmProvider.analyze(query, candidates, top_k=...)` in
 `src/ai_logger/log_search.py`. Provider selection is implemented in
-`src/ai_logger/log_search_providers.py`, and stdlib transport clients live in
-`src/ai_logger/llm.py`.
+`src/ai_logger/log_search_providers.py`, and stdlib transport/runtime clients
+live in `src/ai_logger/llm.py`.
+
+The integration is a logic adoption, not a Node.js runtime dependency.
+`ai_logger` keeps its dependency-free Python package boundary and mirrors the
+portable provider concepts in Python so the web UI and CLI can search logs
+without requiring Node.js or importing `llm_providers` at runtime.
+
+Current implementation evidence in `ai_logger`:
+
+- Provider registry: `src/ai_logger/log_search_providers.py`
+- Codex app-server, OpenAI-compatible, DeepSeek, and mock clients:
+  `src/ai_logger/llm.py`
+- Log-search domain protocol and candidate shaping:
+  `src/ai_logger/log_search.py`
+- CLI provider selection: `src/ai_logger/log_search_cli.py`
+- Web UI provider selector and `/api/search` routing:
+  `src/ai_logger/web.py`, `src/ai_logger/server.py`
+- Verification: `tests/test_log_search.py`, `tests/test_client_server.py`
 
 Portable logic adopted:
 
 - Split provider transport/config from log-search ranking and prompt shaping.
-- Add a small provider registry so `AI_LOGGER_LLM_PROVIDER` can select DeepSeek,
-  local-only, mock/test, and OpenAI-compatible providers consistently.
+- Add a small provider registry so `AI_LOGGER_LLM_PROVIDER` can select Codex
+  app-server, DeepSeek, local-only, mock/test, and OpenAI-compatible providers
+  consistently.
 - Keep the log-search domain contract as the caller-owned layer: it should build
   candidate payloads, redact values, validate returned record IDs, and preserve
   local fallback behavior.
 - Keep mock provider behavior deterministic for tests and offline verification.
+- Keep provider choice request-scoped in the web UI when the user selects a
+  specific provider, while preserving automatic environment-driven routing.
+- Adopt Codex app-server as the default provider with model
+  `gpt-codex-spark-high`; keep the app-server thread ephemeral and constrained
+  by developer instructions that forbid file edits, file inspection, shell
+  commands, and approval requests.
 
 Portable logic still deferred:
 
-- Fenced JSON block extraction equivalent to `outputContracts.mjs`; the current
-  Python providers request whole-response JSON objects.
-- Codex app-server provider integration.
+- Full output-contract parity with `outputContracts.mjs`; the current Python
+  providers request whole-response JSON objects and only tolerate simple fenced
+  JSON around Codex output.
+- Generic `ProviderResult` fields such as raw text output, parsed output, and
+  raw provider response are intentionally collapsed into `LlmLogSearchAnalysis`
+  for log search. Preserve that narrower domain result unless another feature
+  needs generic provider responses.
+
+Environment mapping:
+
+- Default provider is `codex`. `AI_LOGGER_CODEX_MODEL` / `CODEX_MODEL`
+  default to `gpt-codex-spark-high`; `AI_LOGGER_CODEX_COMMAND` /
+  `CODEX_COMMAND` can override the app-server command path.
+- `llm_providers` generic variables (`LLM_PROVIDER`, `LLM_BASE_URL`,
+  `LLM_API_KEY`, `LLM_MODEL`, `LLM_MOCK_RESPONSE`) are accepted by
+  `ai_logger`.
+- `ai_logger` also exposes namespaced aliases (`AI_LOGGER_LLM_PROVIDER`,
+  `AI_LOGGER_LLM_BASE_URL`, `AI_LOGGER_LLM_API_KEY`,
+  `AI_LOGGER_LLM_MODEL`, `AI_LOGGER_LLM_MOCK_RESPONSE`) so host projects can
+  configure log search without colliding with another app-level LLM provider.
+- DeepSeek keeps both shared and historical variables:
+  `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`,
+  plus `AI_LOGGER_DEEPSEEK_API_KEY`, `AI_LOGGER_DEEPSEEK_BASE_URL`, and
+  `AI_LOGGER_DEEPSEEK_MODEL`.
 
 ## Non-Goals
 

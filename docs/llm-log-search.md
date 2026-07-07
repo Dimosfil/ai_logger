@@ -7,15 +7,17 @@
    summary.
 
 The provider is optional at runtime; local ranking still works without an API
-key. The provider boundary follows the reusable `llm_providers` contract:
-`deepseek`, `openai-compatible`, and `mock` are provider-backed modes, while
-`local` and `none` skip the LLM call.
+key. The default provider is local Codex app-server with model
+`gpt-codex-spark-high`. The provider boundary follows the reusable
+`llm_providers` contract: `codex`, `deepseek`, `openai-compatible`, and `mock`
+are provider-backed modes, while `local` and `none` skip the LLM call.
 
 ## Command
 
 ```powershell
 $env:AI_LOGGER_SERVER_JSONL_PATH = "logs/server.jsonl"
-$env:DEEPSEEK_API_KEY = "<secret>"
+$env:AI_LOGGER_LLM_PROVIDER = "codex"
+$env:AI_LOGGER_CODEX_MODEL = "gpt-codex-spark-high"
 ai-logger-log-search "authorization fails after deploy"
 ```
 
@@ -57,8 +59,18 @@ single request.
 - `AI_LOGGER_LOG_SEARCH_CANDIDATES`: local candidates sent to the LLM, default
   `30`.
 - `AI_LOGGER_LOG_SEARCH_TOP_K`: returned matches, default `5`.
-- `AI_LOGGER_LLM_PROVIDER` or `LLM_PROVIDER`: `deepseek`,
-  `openai-compatible`, `mock`, `local`, or `none`; default `deepseek`.
+- `AI_LOGGER_LLM_PROVIDER` or `LLM_PROVIDER`: `codex`, `deepseek`,
+  `openai-compatible`, `mock`, `local`, or `none`; default `codex`.
+- `AI_LOGGER_CODEX_COMMAND` or `CODEX_COMMAND`: Codex command path; on Windows
+  defaults to `%USERPROFILE%\.codex\bin\codex.cmd` when present.
+- `AI_LOGGER_CODEX_MODEL` or `CODEX_MODEL`: Codex app-server model, default
+  `gpt-codex-spark-high`.
+- `AI_LOGGER_CODEX_EFFORT` or `CODEX_EFFORT`: `low`, `medium`, or `high`;
+  default `high`.
+- `AI_LOGGER_CODEX_REQUEST_TIMEOUT_SECONDS` or
+  `CODEX_REQUEST_TIMEOUT_SECONDS`: JSON-RPC request timeout, default `30`.
+- `AI_LOGGER_CODEX_TURN_TIMEOUT_SECONDS` or `CODEX_TURN_TIMEOUT_SECONDS`:
+  turn completion timeout, default `180`.
 - `DEEPSEEK_API_KEY` or `AI_LOGGER_DEEPSEEK_API_KEY`: DeepSeek bearer token.
 - `AI_LOGGER_DEEPSEEK_BASE_URL` or `DEEPSEEK_BASE_URL`: default
   `https://api.deepseek.com`.

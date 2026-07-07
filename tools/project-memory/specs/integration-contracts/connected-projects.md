@@ -13,7 +13,8 @@ them for the current task.
 - Repository: `https://github.com/Dimosfil/llm_providers.git`
 - Role: reusable Node.js provider boundary for LLM and local agent runtimes.
 - Current ai_logger use: logic source for the Python smart log-search provider
-  registry; no Node.js runtime dependency is wired.
+  registry, including the Codex app-server provider shape; no Node.js runtime
+  dependency is wired.
 - Source of truth: `D:\AI\llm_providers\README.md`,
   `D:\AI\llm_providers\tools\project-memory\specs\provider-architecture.md`,
   and package exports in `D:\AI\llm_providers\package.json`.

@@ -112,6 +112,7 @@ class LogIngestHandler(BaseHTTPRequestHandler):
                 top_k=int(payload.get("top_k") or 8),
                 use_llm=bool(payload.get("use_llm", True)),
                 provider_name=_optional_str(payload.get("provider")),
+                response_language=_optional_str(payload.get("response_language")) or "en",
             )
         except Exception as exc:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
