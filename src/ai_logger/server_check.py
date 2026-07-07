@@ -31,7 +31,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    health_url = args.url or f"http://{args.host}:{args.port}/health"
+    check_host = "127.0.0.1" if args.host in {"0.0.0.0", "::"} else args.host
+    health_url = args.url or f"http://{check_host}:{args.port}/health"
     try:
         http_request = request.Request(health_url, method="GET")
         with request.urlopen(http_request, timeout=args.timeout) as response:

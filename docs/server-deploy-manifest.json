@@ -5,6 +5,7 @@
     "start_command": "ai-logger-server",
     "health_command": "ai-logger-server-check",
     "graylog_check_command": "ai-logger-graylog-check",
+    "log_query_command": "ai-logger-log-query",
     "health_url": "http://127.0.0.1:8765/health",
     "ingest_url": "http://127.0.0.1:8765/ingest",
     "required_runtime": "Python >=3.9",
@@ -18,6 +19,12 @@
     "secret_env": [
       "AI_LOGGER_SERVER_TOKEN"
     ],
+    "llm_query_env": [
+      "DEEPSEEK_API_KEY",
+      "DEEPSEEK_BASE_URL",
+      "DEEPSEEK_MODEL",
+      "AI_LOGGER_QUERY_LOGS_PATH"
+    ],
     "backend_env": {
       "graylog_gelf": [
         "AI_LOGGER_GRAYLOG_GELF_URL",
@@ -25,7 +32,8 @@
         "AI_LOGGER_GRAYLOG_TIMEOUT"
       ],
       "jsonl": [
-        "AI_LOGGER_SERVER_JSONL_PATH"
+        "AI_LOGGER_SERVER_JSONL_PATH",
+        "AI_LOGGER_SERVER_PROJECT_DAILY_DIR"
       ],
       "clickhouse": [
         "AI_LOGGER_CLICKHOUSE_URL",
@@ -54,6 +62,27 @@
       "Use this path when the target server is Windows 10 and Docker is not available.",
       "Graylog must expose a GELF HTTP input reachable from the ai_logger server.",
       "Keep deploy/windows/env.local.ps1 private and uncommitted."
+    ]
+  },
+  "local_graylog": {
+    "supported": true,
+    "requires_docker": true,
+    "entrypoint": "deploy/graylog/README.md",
+    "compose_file": "deploy/graylog/docker-compose.yml",
+    "env_example": "deploy/graylog/.env.example",
+    "start_script": "deploy/graylog/start-graylog.ps1",
+    "stop_script": "deploy/graylog/stop-graylog.ps1",
+    "check_script": "deploy/graylog/check-graylog.ps1",
+    "create_gelf_input_script": "deploy/graylog/create-gelf-http-input.ps1",
+    "ui_url": "http://127.0.0.1:9000/",
+    "gelf_http_url": "http://127.0.0.1:12201/gelf",
+    "secret_files": [
+      "deploy/graylog/.env"
+    ],
+    "notes": [
+      "Use this local Docker Compose backend when no external Graylog GELF HTTP input exists.",
+      "Run create-gelf-http-input.ps1 after the Graylog API becomes ready.",
+      "Keep deploy/graylog/.env private and uncommitted."
     ]
   }
 }

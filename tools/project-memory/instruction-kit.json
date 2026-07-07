@@ -1,5 +1,5 @@
 ﻿{
-    "instruction_kit_version":  "2026.07.06.5",
+    "instruction_kit_version":  "2026.07.07.1",
     "source":  "https://github.com/Dimosfil/general-instructions.git",
     "installed_at":  "2026-07-06T12:04:30+03:00",
     "update_check":  {
@@ -214,7 +214,8 @@
                                "2026.07.06.2__add_strict_gi_compliance",
                                "2026.07.06.3__activate_updated_gi_rules_immediately",
                                "2026.07.06.4__strict_tools_product_boundary",
-                               "2026.07.06.5__require_latest_summary_for_gi_start"
+                               "2026.07.06.5__require_latest_summary_for_gi_start",
+                               "2026.07.07.1__clarify_gi_init_github_source"
                            ],
-    "last_update_check_at":  "2026-07-06T19:41:51+03:00"
+    "last_update_check_at":  "2026-07-07T10:58:27+03:00"
 }

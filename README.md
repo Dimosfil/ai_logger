@@ -31,6 +31,7 @@ See also:
 - [Server deploy manifest](docs/server-deploy-manifest.json)
 - [LLM log search](docs/llm-log-search.md)
 - [Windows no-Docker deploy entrypoint](deploy/windows/README.md)
+- [Local Graylog deployment](deploy/graylog/README.md)
 
 ## Plugin Configuration
 
@@ -188,6 +189,8 @@ Server backend environment variables:
 - `AI_LOGGER_SERVER_PORT`: default `8765`;
 - `AI_LOGGER_SERVER_TOKEN`: optional bearer token required by `/ingest`;
 - `AI_LOGGER_SERVER_JSONL_PATH`: write accepted logs to JSON Lines;
+- `AI_LOGGER_SERVER_PROJECT_DAILY_DIR`: write accepted logs to
+  `<dir>/<project>/YYYY-MM-DD.jsonl`;
 - `AI_LOGGER_GRAYLOG_GELF_URL`: forward logs to a Graylog GELF HTTP input;
 - `AI_LOGGER_GRAYLOG_HOST`: GELF `host` value;
 - `AI_LOGGER_GRAYLOG_TIMEOUT`: Graylog request timeout in seconds;
@@ -199,6 +202,37 @@ Graylog can be checked directly with:
 
 ```powershell
 ai-logger-graylog-check
+```
+
+## Ask About Logs With DeepSeek
+
+`ai-logger-log-query` reads one JSON Lines file or a directory of `*.jsonl`
+files and asks DeepSeek to answer from the selected records:
+
+```powershell
+$env:DEEPSEEK_API_KEY = "<secret>"
+ai-logger-log-query "What failed in the last run?" --logs-path "logs/projects"
+```
+
+For an offline context preview without calling DeepSeek:
+
+```powershell
+ai-logger-log-query "What failed?" --logs-path "logs/projects" --print-context
+```
+
+Optional variables:
+
+- `AI_LOGGER_QUERY_LOGS_PATH`: default query log file or directory;
+- `DEEPSEEK_BASE_URL`: default `https://api.deepseek.com`;
+- `DEEPSEEK_MODEL`: default `deepseek-v4-flash`;
+- `DEEPSEEK_TIMEOUT`: request timeout in seconds.
+
+For local development, this repository also includes a Docker Compose Graylog
+stack:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\graylog\start-graylog.ps1
+powershell -ExecutionPolicy Bypass -File .\deploy\graylog\create-gelf-http-input.ps1
 ```
 
 ## Architecture
@@ -213,6 +247,8 @@ level, buffer when plugins fail, and flush records to each registered plugin.
 Plugins implement the `LogPlugin` protocol. Existing plugins:
 
 - `DiskJsonLinesPlugin` writes one JSON object per line.
+- `ProjectDailyJsonLinesPlugin` writes JSON Lines under
+  `<root>/<project>/YYYY-MM-DD.jsonl`.
 - `HttpJsonPlugin` sends JSON records over HTTP.
 - `ServerHttpPlugin` sends records from project clients to the ai_logger server.
 - `GraylogGelfPlugin` converts records to GELF for Graylog.

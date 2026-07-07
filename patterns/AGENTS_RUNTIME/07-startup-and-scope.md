@@ -51,12 +51,13 @@
   `gi restore`. Mention them only as compact context when relevant, then ask for
   the user's current task instead of offering to continue, run, push, or finish
   them.
-- Treat `init <source>`, `инит <source>`, and `инициализируй <source>` that
-  point to the canonical shared-instruction Git repository
-  `https://github.com/Dimosfil/general-instructions.git`, the current
+- Treat `gi init <source>`, `init <source>`, `инит <source>`, and
+  `инициализируй <source>` that point to the canonical shared-instruction Git
+  repository `https://github.com/Dimosfil/general-instructions.git`, the
+  shorter GitHub repo form `Dimosfil/general-instructions.git`, the current
   shared-instruction checkout/cache, `GENERAL_INSTRUCTIONS_HOME`, or another
   known shared-instruction source as a shared-instruction bootstrap/startup
-  request, even without the `gi` prefix.
+  request, even when the user supplies the source as a Markdown link.
   Read the repository's local instructions and follow the documented `gi`
   bootstrap rules. Do not reinterpret that form as Git initialization, OpenCode
   setup, project creation, or skill creation unless the user explicitly names

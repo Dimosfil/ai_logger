@@ -16,6 +16,7 @@ from ai_logger import (
     LogLevel,
     Logger,
     MemoryLogPlugin,
+    ProjectDailyJsonLinesPlugin,
     ServerHttpPlugin,
     catch_and_log,
     configured_logger,
@@ -62,6 +63,21 @@ class LoggingCoreTests(unittest.TestCase):
             payload = json.loads(lines[0])
             self.assertEqual(payload["message"], "task.failed")
             self.assertEqual(payload["context"]["task_id"], "x")
+
+    def test_project_daily_plugin_splits_records_by_project_and_date(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = ProjectDailyJsonLinesPlugin(Path(tmp) / "projects")
+            logger = Logger("unit", LogAggregator([plugin]))
+
+            logger.info("project.one", project="alpha/api")
+            logger.info("project.two", project="beta")
+
+            alpha_files = list((Path(tmp) / "projects" / "alpha_api").glob("*.jsonl"))
+            beta_files = list((Path(tmp) / "projects" / "beta").glob("*.jsonl"))
+            self.assertEqual(len(alpha_files), 1)
+            self.assertEqual(len(beta_files), 1)
+            alpha_payload = json.loads(alpha_files[0].read_text(encoding="utf-8").splitlines()[0])
+            self.assertEqual(alpha_payload["message"], "project.one")
 
     def test_exception_helpers_log_and_reraise_by_default(self) -> None:
         plugin = MemoryLogPlugin()
@@ -146,6 +162,16 @@ class LoggingCoreTests(unittest.TestCase):
         )
 
         self.assertTrue(any(isinstance(plugin, GraylogGelfPlugin) for plugin in aggregator._plugins))
+
+    def test_server_aggregator_can_configure_project_daily_jsonl_sink(self) -> None:
+        from ai_logger import build_server_aggregator_from_env
+
+        with tempfile.TemporaryDirectory() as tmp:
+            aggregator = build_server_aggregator_from_env(
+                {"AI_LOGGER_SERVER_PROJECT_DAILY_DIR": str(Path(tmp) / "projects")}
+            )
+
+        self.assertTrue(any(isinstance(plugin, ProjectDailyJsonLinesPlugin) for plugin in aggregator._plugins))
 
     def test_tool_logger_adds_tool_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

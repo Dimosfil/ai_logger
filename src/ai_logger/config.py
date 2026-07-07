@@ -13,6 +13,7 @@ from .plugins import (
     DiskJsonLinesPlugin,
     GraylogGelfPlugin,
     HttpJsonPlugin,
+    ProjectDailyJsonLinesPlugin,
     ServerHttpPlugin,
 )
 
@@ -109,6 +110,10 @@ def build_server_aggregator_from_env(
     jsonl_path = env.get("AI_LOGGER_SERVER_JSONL_PATH")
     if jsonl_path:
         aggregator.add_plugin(DiskJsonLinesPlugin(jsonl_path))
+
+    project_daily_dir = env.get("AI_LOGGER_SERVER_PROJECT_DAILY_DIR")
+    if project_daily_dir:
+        aggregator.add_plugin(ProjectDailyJsonLinesPlugin(project_daily_dir))
 
     graylog_url = env.get("AI_LOGGER_GRAYLOG_GELF_URL")
     if graylog_url:

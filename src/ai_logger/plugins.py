@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import socket
 import threading
 from pathlib import Path
@@ -61,6 +62,38 @@ class DiskJsonLinesPlugin(BasePlugin):
             with self.path.open("a", encoding="utf-8") as stream:
                 stream.write(line)
                 stream.write("\n")
+
+
+class ProjectDailyJsonLinesPlugin(BasePlugin):
+    name = "project_daily_jsonl"
+
+    def __init__(self, root_path: str | Path, *, default_project: str = "unknown") -> None:
+        self.root_path = Path(root_path)
+        self.default_project = default_project
+        self._lock = threading.Lock()
+
+    def emit(self, record: LogRecord) -> None:
+        project = self._project_slug(record)
+        date_name = record.timestamp.date().isoformat()
+        path = self.root_path / project / f"{date_name}.jsonl"
+        line = json.dumps(record.to_dict(), ensure_ascii=False, sort_keys=True)
+        with self._lock:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as stream:
+                stream.write(line)
+                stream.write("\n")
+
+    def _project_slug(self, record: LogRecord) -> str:
+        raw_project = record.context.get("project") or record.logger_name.split(".", 1)[0]
+        slug = _safe_path_part(str(raw_project))
+        if slug:
+            return slug
+        return _safe_path_part(self.default_project) or "unknown"
+
+
+def _safe_path_part(value: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._-")
+    return slug[:96]
 
 
 class HttpJsonPlugin(BasePlugin):

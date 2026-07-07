@@ -29,6 +29,7 @@ from .plugins import (
     HttpJsonPlugin,
     LogPlugin,
     MemoryLogPlugin,
+    ProjectDailyJsonLinesPlugin,
     ServerHttpPlugin,
 )
 from .records import LogRecord
@@ -58,6 +59,7 @@ __all__ = [
     "LogSearchResult",
     "Logger",
     "MemoryLogPlugin",
+    "ProjectDailyJsonLinesPlugin",
     "ServerHttpPlugin",
     "SmartLogSearcher",
     "build_aggregator_from_env",
