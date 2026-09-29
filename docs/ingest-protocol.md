@@ -13,6 +13,10 @@ Content-Type: application/json; charset=utf-8
 ```
 
 The request body may be one record object or an array of record objects.
+In hosted PostgreSQL mode, a scoped `ingest` key is required and every record
+must include `context.project`. The batch limit is 100 records and 1 MiB.
+See [Hosted PostgreSQL logger](hosted-postgres.md) for key management and the
+agent read API.
 
 ## Record Shape
 

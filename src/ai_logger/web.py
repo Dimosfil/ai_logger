@@ -543,8 +543,13 @@ INDEX_HTML = r"""<!doctype html>
     const el = (id) => document.getElementById(id);
     const t = (key) => (translations[state.uiLanguage] || translations.en)[key] || translations.en[key] || key;
 
-    async function api(path, options) {
-      const response = await fetch(path, options);
+    let apiToken = "";
+    async function api(path, options = {}) {
+      let response = await fetch(path, { ...options, headers: { ...(options.headers || {}), ...(apiToken ? { Authorization: `Bearer ${apiToken}` } : {}) } });
+      if (response.status === 401) {
+        apiToken = window.prompt("Admin token") || "";
+        if (apiToken) response = await fetch(path, { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${apiToken}` } });
+      }
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || response.statusText);
       return payload;

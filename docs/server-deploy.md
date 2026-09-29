@@ -1,5 +1,8 @@
 # Server Deploy Guide
 
+For the PostgreSQL-backed Docker service with scoped client and agent API keys,
+see [Hosted PostgreSQL logger](hosted-postgres.md).
+
 This guide is the contract for agents that deploy the `ai_logger` server on a
 machine.
 
@@ -15,9 +18,10 @@ backend plugins.
 project clients -> http://<host>:<port>/ingest -> ai_logger server -> backend plugins
 ```
 
-The server is dependency-free Python. Graylog GELF HTTP is the first supported
-centralized backend. JSON Lines remains useful as a local fallback or
-development backend.
+The core server uses standard-library Python. Hosted PostgreSQL mode uses the
+optional `postgres` extra and is the primary durable deployment. Graylog GELF
+HTTP remains an optional external sink; JSON Lines supports the local browser
+and fallback use.
 
 ## Windows 10 Without Docker
 

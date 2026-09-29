@@ -1,6 +1,6 @@
 # Logging Architecture
 
-Last reviewed: 2026-07-07
+Last reviewed: 2026-09-29
 
 ## Goal
 
@@ -40,6 +40,50 @@ flowchart LR
   WebUi --> StoredLogs["JSONL log files"]
 ```
 
+## Hosted PostgreSQL workflow (current)
+
+When `DATABASE_URL` is set, startup creates the prefixed
+`ai_logger_records` and `ai_logger_api_keys` tables. The database URL and
+bootstrap administrator token are private environment values. Hosted mode
+requires `AI_LOGGER_ADMIN_TOKEN`; startup fails without it. The records table
+stores normalized protocol JSON plus project, record ID, level, logger, and
+timestamps. `(project, record_id)` is unique for retry deduplication.
+Database connections require TLS. The supplied endpoint on port 16173 did
+not support SSL when checked on 2026-09-29, so live startup is blocked until
+the user provides a TLS-capable endpoint or secure tunnel. The tables already
+exist; the local Docker service is stopped.
+
+An administrator authenticates with the bootstrap token, creates or revokes
+keys at `/api/admin/keys`, and sees each newly generated key exactly once.
+Only a SHA-256 digest is stored. A key has `ingest`, `read`, or both scopes and
+can be bound to a project. Project binding is checked against
+`context.project` on ingest and against the requested project on read. An
+`ingest` key cannot read records; a `read` key cannot ingest. The existing
+JSONL browser and settings/search APIs require the administrator token in
+hosted mode. `/health` is public and reports storage unavailable with HTTP 503
+when PostgreSQL cannot be reached.
+
+On `POST /ingest`, validate authorization, batch size, protocol records, and
+project binding before writing. Store all selected records in one PostgreSQL
+transaction, then emit to optional JSONL/other plugins and return 202. A
+storage failure returns 503 so the client can retry; plugin copies are
+best-effort after the authoritative database write. The agent reads bounded,
+newest-first records from `/api/agent/logs` with project, level, and time
+filters. The portable Node.js client in `clients/node/` permits only named
+diagnostic context fields and returns a failure result or writes a local
+fallback when the server is unreachable.
+The Node.js client rejects remote HTTP URLs so its API key travels only over
+HTTPS; loopback HTTP is allowed for local development.
+
+The `ai-media-client` integration is prepared but not installed in that
+repository. Its historical `media_system_errors` and generation/account
+journals remain application-owned. The central logger receives only new,
+sanitized diagnostic events; no cross-database copy is required for ingest.
+Current implementation evidence: `src/ai_logger/server.py`,
+`src/ai_logger/postgres_store.py`, `src/ai_logger/admin.py`,
+`clients/node/ai-logger-client.mjs`, `tests/test_hosted_server.py`, and
+`docs/hosted-postgres.md` (checked 2026-09-29).
+
 ## Contracts
 
 `Logger` is the public application API. It creates structured `LogRecord`
@@ -75,7 +119,7 @@ machine deployment workflow. The server verification entry point is
 `ai-logger-server-check`, which checks `/health` and returns a non-zero exit
 code when the server is unavailable or unhealthy.
 
-Graylog GELF HTTP is the first centralized server backend implementation.
+Graylog GELF HTTP was the first centralized server backend implementation.
 `GraylogGelfPlugin` converts accepted `LogRecord` instances to GELF 1.1 and
 sends them to `AI_LOGGER_GRAYLOG_GELF_URL`. `ai-logger-graylog-check` sends a
 direct `ai_logger.graylog_check` GELF event so an agent can verify the Graylog

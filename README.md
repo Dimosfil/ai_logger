@@ -7,8 +7,8 @@ Shared agent instructions are documented in [BOOTSTRAP.md](BOOTSTRAP.md).
 - **client adapters**: installed into any project and configured by that
   project's agent. Adapters may target Python logging, NLog, log4net, Serilog,
   pino, winston, Logback, Go slog, or another native logging framework;
-- **local/server process**: receives logs and routes them to selected backends
-  such as JSONL, Graylog GELF, ClickHouse, or future plugins.
+- **local/server process**: receives logs and stores them in hosted PostgreSQL
+  or routes them to JSONL, Graylog GELF, ClickHouse, or future plugins.
 
 The Python package in this repository is the first reference SDK and server
 implementation. The cross-stack contract is the HTTP ingest protocol, not the
@@ -20,8 +20,9 @@ Inside a client adapter, logging still has three layers:
 - `LogAggregator` enriches, filters, buffers, and fans records out;
 - output plugins decide where records go, such as JSON Lines on disk or HTTP.
 
-The package is intentionally dependency-free so it can be embedded into agents,
-services, scripts, and tools before a larger observability stack exists.
+The core package uses only the Python standard library. Hosted PostgreSQL mode
+installs the optional `postgres` extra; the portable Node.js client uses Node
+built-ins.
 
 See also:
 
@@ -33,6 +34,8 @@ See also:
 - [Server deploy manifest](docs/server-deploy-manifest.json)
 - [LLM log search](docs/llm-log-search.md)
 - [Windows no-Docker deploy entrypoint](deploy/windows/README.md)
+- [Hosted PostgreSQL and Docker setup](docs/hosted-postgres.md)
+- [Portable Node.js client](clients/node/README.md)
 - [Local Graylog deployment](deploy/graylog/README.md)
 
 ## Plugin Configuration

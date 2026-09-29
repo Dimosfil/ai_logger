@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import hmac
+from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -9,6 +12,8 @@ from urllib import parse
 from .aggregator import LogAggregator
 from .config import build_server_aggregator_from_env
 from .records import LogRecord
+from .postgres_store import PostgresStore
+from .admin import render_admin_html
 from .web import WebLogRepository, render_index_html, search_levels_for_filters
 
 
@@ -17,14 +22,21 @@ class LogIngestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path, query = self._path_and_query()
+        if path.rstrip("/") == "/admin" and self.server.store:
+            self._send_html(HTTPStatus.OK, render_admin_html())
+            return
         if path.rstrip("/") == "":
             self._send_html(HTTPStatus.OK, render_index_html())
             return
         if path.rstrip("/") == "/health":
+            try:
+                storage_ready = not self.server.store or self.server.store.ping()
+            except Exception:
+                storage_ready = False
             self._send_json(
-                HTTPStatus.OK,
+                HTTPStatus.OK if storage_ready else HTTPStatus.SERVICE_UNAVAILABLE,
                 {
-                    "status": "ok",
+                    "status": "ok" if storage_ready else "storage_unavailable",
                     "service": "ai_logger",
                     "plugins": self.server.plugin_count,
                     "plugin_names": self.server.plugin_names,
@@ -33,47 +45,145 @@ class LogIngestHandler(BaseHTTPRequestHandler):
             )
             return
         if path.rstrip("/") == "/api/overview":
+            if self._require_scope("admin") is False:
+                return
             self._send_json(HTTPStatus.OK, self.server.web_logs.overview())
             return
         if path.rstrip("/") == "/api/logs":
+            if self._require_scope("admin") is False:
+                return
             self._send_json(HTTPStatus.OK, self._logs_payload(query))
             return
         if path.rstrip("/") == "/api/settings":
+            if self._require_scope("admin") is False:
+                return
             self._send_json(HTTPStatus.OK, self.server.web_logs.settings())
+            return
+        if path.rstrip("/") == "/api/agent/logs" and self.server.store:
+            project_scope = self._require_scope("read")
+            if project_scope is False:
+                return
+            try:
+                project = _first(query, "project")
+                if project_scope and project and project != project_scope:
+                    self._send_json(HTTPStatus.FORBIDDEN, {"error": "project_forbidden"})
+                    return
+                project = project_scope or project
+                since_value = _first(query, "since")
+                since = datetime.fromisoformat(since_value) if since_value else None
+                if since and since.tzinfo is None:
+                    raise ValueError("since needs timezone")
+                records = self.server.store.read_records(
+                    project=project, levels=_levels(_first(query, "levels")),
+                    since=since, limit=_int_query(query, "limit", 100),
+                )
+            except ValueError:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_query"})
+                return
+            except Exception:
+                self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "storage_unavailable"})
+                return
+            self._send_json(HTTPStatus.OK, {"records": records})
+            return
+        if path.rstrip("/") == "/api/admin/keys" and self.server.store:
+            if self._require_scope("admin") is False:
+                return
+            try:
+                self._send_json(HTTPStatus.OK, {"keys": self.server.store.list_keys()})
+            except Exception:
+                self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "storage_unavailable"})
             return
         self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
     def do_POST(self) -> None:
         path, _query = self._path_and_query()
         if path.rstrip("/") == "/api/search":
+            if self._require_scope("admin") is False:
+                return
             self._handle_search()
             return
         if path.rstrip("/") == "/api/settings":
+            if self._require_scope("admin") is False:
+                return
             self._handle_settings()
+            return
+        if path.rstrip("/") == "/api/admin/keys" and self.server.store:
+            if self._require_scope("admin") is False:
+                return
+            try:
+                payload = self._read_payload()
+                if not isinstance(payload, dict) or not isinstance(payload.get("scopes"), list):
+                    raise ValueError("Invalid key request")
+                result = self.server.store.create_key(
+                    str(payload.get("name") or ""), payload["scopes"],
+                    payload.get("project"),
+                )
+            except ValueError as exc:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            except Exception:
+                self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "storage_unavailable"})
+                return
+            self._send_json(HTTPStatus.CREATED, result)
             return
         if path.rstrip("/") != "/ingest":
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
             return
-        if not self._authorized():
-            self._send_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"})
+        project_scope = self._require_scope("ingest")
+        if project_scope is False:
             return
 
         try:
             payload = self._read_payload()
             records = payload if isinstance(payload, list) else [payload]
-            count = 0
+            if not 1 <= len(records) <= 100:
+                raise ValueError("Expected 1 to 100 records")
+            parsed: list[LogRecord] = []
             for item in records:
                 if not isinstance(item, dict):
                     raise ValueError("Each log record must be an object.")
                 record = LogRecord.from_dict(item)
-                if self.server.web_logs.should_collect(record):
-                    self.server.aggregator.emit(record)
-                count += 1
-        except Exception as exc:
+                if self.server.store:
+                    project = record.context.get("project")
+                    if not isinstance(project, str) or not project or project != project.strip() or len(project) > 100:
+                        raise ValueError("Record context.project is required")
+                    if project_scope and project != project_scope:
+                        self._send_json(HTTPStatus.FORBIDDEN, {"error": "project_forbidden"})
+                        return
+                parsed.append(record)
+        except (ValueError, TypeError, AttributeError) as exc:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
             return
 
-        self._send_json(HTTPStatus.ACCEPTED, {"accepted": count})
+        selected = [record for record in parsed if self.server.web_logs.should_collect(record)]
+        if self.server.store:
+            try:
+                selected = self.server.store.insert_records(selected)
+            except Exception:
+                self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "storage_unavailable"})
+                return
+        for record in selected:
+            self.server.aggregator.emit(record)
+        self._send_json(HTTPStatus.ACCEPTED, {"accepted": len(parsed), "stored": len(selected)})
+
+    def do_DELETE(self) -> None:
+        path, _ = self._path_and_query()
+        if not self.server.store or not path.startswith("/api/admin/keys/"):
+            self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+            return
+        if self._require_scope("admin") is False:
+            return
+        try:
+            key_id = int(path.rsplit("/", 1)[-1])
+            revoked = self.server.store.revoke_key(key_id)
+        except ValueError:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_key_id"})
+            return
+        except Exception:
+            self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "storage_unavailable"})
+            return
+        self._send_json(HTTPStatus.OK if revoked else HTTPStatus.NOT_FOUND,
+                        {"revoked": revoked})
 
     def log_message(self, _format: str, *_args: Any) -> None:
         if self.server.access_log:
@@ -85,10 +195,33 @@ class LogIngestHandler(BaseHTTPRequestHandler):
             return True
         return self.headers.get("Authorization") == f"Bearer {token}"
 
+    def _require_scope(self, scope: str) -> str | bool:
+        if not self.server.store:
+            if scope == "ingest" and self._authorized():
+                return ""
+            if scope == "admin":
+                return ""
+            self._send_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"})
+            return False
+        header = self.headers.get("Authorization", "")
+        key = header[7:] if header.startswith("Bearer ") else ""
+        if self.server.admin_token and key and hmac.compare_digest(key, self.server.admin_token):
+            return ""
+        if scope != "admin":
+            try:
+                result = self.server.store.authorize(key, scope)
+            except Exception:
+                self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "storage_unavailable"})
+                return False
+            if result is not False:
+                return result
+        self._send_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"})
+        return False
+
     def _read_payload(self) -> Any:
         length = int(self.headers.get("Content-Length") or "0")
-        if length <= 0:
-            raise ValueError("Empty request body.")
+        if length <= 0 or length > 1024 * 1024:
+            raise ValueError("Request body must be 1 byte to 1 MiB")
         raw = self.rfile.read(length)
         return json.loads(raw.decode("utf-8"))
 
@@ -169,12 +302,18 @@ class LogIngestHttpServer(ThreadingHTTPServer):
         token: str | None = None,
         access_log: bool = False,
         web_logs: WebLogRepository | None = None,
+        store: PostgresStore | None = None,
+        admin_token: str | None = None,
     ) -> None:
+        if store and not admin_token:
+            raise ValueError("AI_LOGGER_ADMIN_TOKEN is required with PostgreSQL")
         super().__init__(server_address, LogIngestHandler)
         self.aggregator = aggregator
         self.token = token
         self.access_log = access_log
         self.web_logs = web_logs or WebLogRepository.from_env()
+        self.store = store
+        self.admin_token = admin_token
 
     @property
     def plugin_count(self) -> int:
@@ -196,6 +335,8 @@ def create_server(
     token: str | None = None,
     access_log: bool = False,
     web_logs: WebLogRepository | None = None,
+    store: PostgresStore | None = None,
+    admin_token: str | None = None,
 ) -> LogIngestHttpServer:
     return LogIngestHttpServer(
         (host, port),
@@ -203,16 +344,21 @@ def create_server(
         token=token,
         access_log=access_log,
         web_logs=web_logs,
+        store=store,
+        admin_token=admin_token,
     )
 
 
 def main() -> int:
-    import os
-
     host = os.environ.get("AI_LOGGER_SERVER_HOST", "127.0.0.1")
     port = int(os.environ.get("AI_LOGGER_SERVER_PORT", "8765"))
     token = os.environ.get("AI_LOGGER_SERVER_TOKEN")
-    server = create_server(host, port, token=token)
+    database_url = os.environ.get("DATABASE_URL")
+    store = PostgresStore(database_url) if database_url else None
+    if store:
+        store.ensure_schema()
+    server = create_server(host, port, token=token, store=store,
+                           admin_token=os.environ.get("AI_LOGGER_ADMIN_TOKEN"))
     print(f"ai_logger server listening on http://{host}:{port}/")
     try:
         server.serve_forever()

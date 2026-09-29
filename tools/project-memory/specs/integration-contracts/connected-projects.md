@@ -34,10 +34,12 @@ them for the current task.
   diagnostic JSONL journal; `src/system-errors.js` stores sanitized system
   errors in PostgreSQL `media_system_errors`; the account generation journal
   remains an application-owned PostgreSQL workflow.
-- Planned ai_logger edge: forward selected sanitized system and lifecycle events
-  from an opt-in client adapter to `/ingest`, preserving the existing local
-  journals and keeping media prompts, tokens, cookies, and raw provider payloads
-  out of central logs. This edge is not implemented yet.
+- Prepared ai_logger edge: `clients/node/ai-logger-client.mjs` forwards selected sanitized
+  system and lifecycle events to `/ingest` with a project-bound ingest key.
+  The module remains in `ai_logger` for later transfer; no files in
+  `ai-media-client` were changed. Existing local journals remain in place.
+  Media prompts, tokens, cookies, and raw provider payloads stay out of
+  central logs.
 - Deployment evidence: `AGENTS.md`, `compose.yaml`, `Dockerfile`, `.env.example`,
   `README.md`, `docs/generation-logging.md`, and
   `docs/database-roles-and-migrations.md`. Runtime Compose reads a private `.env`

@@ -39,6 +39,17 @@
       "adapter_shape": "Microsoft.Extensions.Logging ILoggerProvider",
       "note": "Implement later; do not install for C# projects yet."
     },
+    "node.generic": {
+      "status": "implemented",
+      "runtime": "Node.js >=18",
+      "module": "clients/node/ai-logger-client.mjs",
+      "guide": "clients/node/README.md",
+      "required_env": [
+        "AI_LOGGER_SERVER_URL",
+        "AI_LOGGER_API_KEY",
+        "AI_LOGGER_PROJECT"
+      ]
+    },
     "node.pino": {
       "status": "planned",
       "runtime": "Node.js",

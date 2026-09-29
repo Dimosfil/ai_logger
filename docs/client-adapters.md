@@ -28,6 +28,10 @@ Examples:
 | Java/Kotlin | Logback/Log4j2 | Appender |
 | Go | `slog`, `zap`, `zerolog` | Handler/core/writer |
 
+The first portable Node.js HTTP client core is implemented in
+[`clients/node/`](../clients/node/README.md). It can be called from an existing
+Node.js logging workflow; pino and winston transports remain future adapters.
+
 ## Client Core
 
 `AiLoggerClient` is the framework-neutral client. Adapters should depend on it

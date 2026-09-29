@@ -19,6 +19,7 @@ deploy/graylog/.env
 deploy/graylog/*.local.ps1
 *.log
 logs/
+.env
 
 # Python build/test artifacts
 .venv/

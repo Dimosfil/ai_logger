@@ -1,0 +1,9 @@
+{
+  "name": "@ai-logger/node-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./ai-logger-client.mjs",
+  "scripts": {"test": "node --test"},
+  "engines": {"node": ">=18"}
+}

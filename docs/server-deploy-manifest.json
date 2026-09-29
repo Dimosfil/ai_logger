@@ -17,7 +17,9 @@
       "AI_LOGGER_GRAYLOG_HOST"
     ],
     "secret_env": [
-      "AI_LOGGER_SERVER_TOKEN"
+      "AI_LOGGER_SERVER_TOKEN",
+      "DATABASE_URL",
+      "AI_LOGGER_ADMIN_TOKEN"
     ],
     "llm_query_env": [
       "DEEPSEEK_API_KEY",
@@ -41,13 +43,16 @@
         "AI_LOGGER_CLICKHOUSE_TIMEOUT"
       ]
     },
-    "primary_backend": "graylog_gelf",
+    "primary_backend": "postgresql",
     "implemented_backends": [
       "graylog_gelf",
       "jsonl",
-      "clickhouse"
+      "clickhouse",
+      "postgresql"
     ],
-    "agent_guide": "docs/server-deploy.md"
+    "agent_guide": "docs/server-deploy.md",
+    "hosted_postgres_guide": "docs/hosted-postgres.md",
+    "docker_compose_file": "compose.yaml"
   },
   "windows_no_docker": {
     "supported": true,

@@ -25,6 +25,9 @@ ai-logger-graylog-check = "ai_logger.graylog_check:main"
 ai-logger-log-search = "ai_logger.log_search_cli:main"
 ai-logger-log-query = "ai_logger.log_query:main"
 
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.1,<4"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
