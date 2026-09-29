@@ -1,5 +1,11 @@
 # ai_logger
 
+The hosted service includes a minimal Telegram bot at `@ai_loggerbot`.
+With a private `TELEGRAM_BOT_TOKEN` (or hosted `BOT_TOKEN`), it answers private
+`/start` and `/help` commands. The transferable media-client integration lives
+in `integrations/ai-media-client/`; deployment details are in
+`docs/hosted-postgres.md`.
+
 Shared agent instructions are documented in [BOOTSTRAP.md](BOOTSTRAP.md).
 
 `ai_logger` is a small universal logging platform with two deployable parts:

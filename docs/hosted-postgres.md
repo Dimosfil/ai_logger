@@ -46,3 +46,18 @@ The Node client in `clients/node/` needs only
 `AI_LOGGER_PROJECT=ai-media-client`. It sends only selected diagnostic
 fields and requires HTTPS for remote delivery. No files in
 `ai-media-client` are changed by this repository.
+
+## Telegram bot
+
+The hosted process also runs `@ai_loggerbot` by long polling when it receives
+`TELEGRAM_BOT_TOKEN` or Bothost's `BOT_TOKEN`. The Docker image expects the
+Telegram username `ai_loggerbot` and checks it with `getMe` before polling. If
+the token belongs to another bot, `/health` reports `telegram.error` as
+`wrong_bot_token`. Only private `/start` and `/help` are handled for now; the
+reply confirms that `ai_logger` is running. The bot needs outbound HTTPS to
+Telegram and does not open another inbound port. Run only one instance with
+the same token; another poller or an active webhook can cause `poll_conflict`.
+
+Locally, put `TELEGRAM_BOT_TOKEN` in the ignored `.env`. Keep it out of Git.
+`/health` reports bot configuration, thread state, and an error code separately
+from database health. An unavailable Telegram API does not stop the log server.

@@ -82,9 +82,15 @@ The `ai-media-client` integration is prepared but not installed in that
 repository. Its historical `media_system_errors` and generation/account
 journals remain application-owned. The central logger receives only new,
 sanitized diagnostic events; no cross-database copy is required for ingest.
+`integrations/ai-media-client/` is the transfer package for the existing
+Node client and media-specific forwarder. The backend and Telegram bot remain
+in `ai_logger`. The bot uses private-chat long polling with the configured
+Telegram token and responds to `/start` and `/help`; it has no access to media
+tasks or log records yet. `getMe` must identify `ai_loggerbot` before polling.
 Current implementation evidence: `src/ai_logger/server.py`,
 `src/ai_logger/postgres_store.py`, `src/ai_logger/admin.py`,
-`clients/node/ai-logger-client.mjs`, `tests/test_hosted_server.py`, and
+`src/ai_logger/telegram_bot.py`, `clients/node/ai-logger-client.mjs`,
+`integrations/ai-media-client/`, `tests/test_hosted_server.py`, and
 `docs/hosted-postgres.md` (checked 2026-09-29).
 
 ## Contracts

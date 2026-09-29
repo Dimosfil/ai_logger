@@ -12,6 +12,7 @@ from .aggregator import LogAggregator
 from .config import build_server_aggregator_from_env
 from .records import LogRecord
 from .postgres_store import PostgresStore
+from .telegram_bot import TelegramBot, token_from_env
 from .admin import render_admin_html
 from .web import WebLogRepository, render_index_html, search_levels_for_filters
 
@@ -40,6 +41,9 @@ class LogIngestHandler(BaseHTTPRequestHandler):
                     "plugins": self.server.plugin_count,
                     "plugin_names": self.server.plugin_names,
                     "web": True,
+                    "telegram": self.server.telegram_bot.status() if self.server.telegram_bot else {
+                        "configured": False, "running": False, "error": None,
+                    },
                 },
             )
             return
@@ -241,6 +245,7 @@ class LogIngestHttpServer(ThreadingHTTPServer):
         access_log: bool = False,
         web_logs: WebLogRepository | None = None,
         store: PostgresStore | None = None,
+        telegram_bot: TelegramBot | None = None,
     ) -> None:
         super().__init__(server_address, LogIngestHandler)
         self.aggregator = aggregator
@@ -248,6 +253,7 @@ class LogIngestHttpServer(ThreadingHTTPServer):
         self.access_log = access_log
         self.web_logs = web_logs or WebLogRepository.from_env()
         self.store = store
+        self.telegram_bot = telegram_bot
 
     @property
     def plugin_count(self) -> int:
@@ -270,6 +276,7 @@ def create_server(
     access_log: bool = False,
     web_logs: WebLogRepository | None = None,
     store: PostgresStore | None = None,
+    telegram_bot: TelegramBot | None = None,
 ) -> LogIngestHttpServer:
     return LogIngestHttpServer(
         (host, port),
@@ -278,6 +285,7 @@ def create_server(
         access_log=access_log,
         web_logs=web_logs,
         store=store,
+        telegram_bot=telegram_bot,
     )
 
 
@@ -288,13 +296,21 @@ def main() -> int:
     store = PostgresStore(database_url, ssl=os.environ.get("DATABASE_SSL") == "1") if database_url else None
     if store:
         store.ensure_schema()
-    server = create_server(host, port, token=token, store=store)
+    telegram_token = token_from_env(os.environ)
+    telegram_bot = TelegramBot(
+        telegram_token, expected_username=os.environ.get("TELEGRAM_BOT_USERNAME")
+    ) if telegram_token else None
+    server = create_server(host, port, token=token, store=store, telegram_bot=telegram_bot)
+    if telegram_bot:
+        telegram_bot.start()
     print(f"ai_logger server listening on http://{host}:{port}/")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         return 0
     finally:
+        if telegram_bot:
+            telegram_bot.stop()
         server.server_close()
     return 0
 

@@ -28,16 +28,16 @@ them for the current task.
 
 - Local path: `D:\AI\ai-media-client`
 - Repository: `https://github.com/sidindeep/ai-media-client`
-- Role: planned first Node.js client of the cross-stack HTTP ingest protocol and
+- Role: first Node.js client of the cross-stack HTTP ingest protocol and
   reference for Docker Compose, private `.env`, and PostgreSQL operations.
 - Current logging sources: `src/generation-log.js` writes a private rotating
   diagnostic JSONL journal; `src/system-errors.js` stores sanitized system
   errors in PostgreSQL `media_system_errors`; the account generation journal
   remains an application-owned PostgreSQL workflow.
-- Prepared ai_logger edge: `clients/node/ai-logger-client.mjs` forwards selected sanitized
-  system and lifecycle events to `/ingest` without an API key.
-  The module remains in `ai_logger` for later transfer; no files in
-  `ai-media-client` were changed. Existing local journals remain in place.
+- Active ai_logger edge: `clients/node/ai-logger-client.mjs` was copied to
+  `ai-media-client/src/ai-logger-client.mjs` and connected through
+  `src/ai-logger.js` to selected system and lifecycle events. Delivery is
+  enabled when `AI_LOGGER_SERVER_URL` is set. Existing local journals remain in place.
   Media prompts, tokens, cookies, and raw provider payloads stay out of
   central logs.
 - Deployment evidence: `AGENTS.md`, `compose.yaml`, `Dockerfile`, `.env.example`,
