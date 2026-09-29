@@ -6,7 +6,7 @@ import hmac
 from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any
+from typing import Any, Mapping
 from urllib import parse
 
 from .aggregator import LogAggregator
@@ -350,15 +350,14 @@ def create_server(
 
 
 def main() -> int:
-    host = os.environ.get("AI_LOGGER_SERVER_HOST", "127.0.0.1")
-    port = int(os.environ.get("AI_LOGGER_SERVER_PORT", "8765"))
+    host, port = _bind_address_from_env(os.environ)
     token = os.environ.get("AI_LOGGER_SERVER_TOKEN")
-    database_url = os.environ.get("DATABASE_URL")
+    database_url, admin_token = _database_settings_from_env(os.environ)
     store = PostgresStore(database_url) if database_url else None
     if store:
         store.ensure_schema()
     server = create_server(host, port, token=token, store=store,
-                           admin_token=os.environ.get("AI_LOGGER_ADMIN_TOKEN"))
+                           admin_token=admin_token)
     print(f"ai_logger server listening on http://{host}:{port}/")
     try:
         server.serve_forever()
@@ -367,6 +366,31 @@ def main() -> int:
     finally:
         server.server_close()
     return 0
+
+
+def _bind_address_from_env(environ: Mapping[str, str]) -> tuple[str, int]:
+    """Honor the platform's routed port while preserving local defaults."""
+    platform_port = environ.get("PORT")
+    host = environ.get("AI_LOGGER_SERVER_HOST") or (
+        "0.0.0.0" if platform_port else "127.0.0.1"
+    )
+    port = int(platform_port or environ.get("AI_LOGGER_SERVER_PORT") or "8765")
+    if not 1 <= port <= 65535:
+        raise ValueError("Server port must be between 1 and 65535")
+    return host, port
+
+
+def _database_settings_from_env(environ: Mapping[str, str]) -> tuple[str | None, str | None]:
+    database_url = environ.get("DATABASE_URL") or None
+    admin_token = environ.get("AI_LOGGER_ADMIN_TOKEN") or None
+    if environ.get("AI_LOGGER_REQUIRE_POSTGRES") == "1":
+        if not database_url:
+            raise RuntimeError("DATABASE_URL is required for hosted server")
+        if not admin_token or len(admin_token) < 32:
+            raise RuntimeError("AI_LOGGER_ADMIN_TOKEN must be at least 32 characters")
+    elif database_url and not admin_token:
+        raise RuntimeError("AI_LOGGER_ADMIN_TOKEN is required with PostgreSQL")
+    return database_url, admin_token
 
 
 def _first(query: dict[str, list[str]], key: str) -> str | None:

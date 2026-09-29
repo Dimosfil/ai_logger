@@ -13,6 +13,10 @@ Copy `.env.example` to ignored `.env` and set:
 - `AI_LOGGER_ADMIN_TOKEN`: long random secret used only by the administrator;
 - `AI_LOGGER_SERVER_PROJECT_DAILY_DIR=/app/logs`: JSONL copy for the existing web viewer.
 
+The Docker image sets `AI_LOGGER_REQUIRE_POSTGRES=1`. It refuses to start
+without `DATABASE_URL` and an administrator token of at least 32 characters;
+hosted deployments cannot silently fall back to unauthenticated JSONL mode.
+
 PostgreSQL TLS is required by the server (`sslmode=require`). The currently
 supplied database endpoint on port 16173 answered without SSL in the
 2026-09-29 connectivity check, so the container must remain stopped until a
@@ -28,6 +32,12 @@ clients, place an HTTPS reverse proxy in front and route `/ingest` and read
 endpoints to this service. Set the client's `AI_LOGGER_SERVER_URL` to that
 public HTTPS `/ingest` address.
 `/health` returns 503 if PostgreSQL cannot be reached.
+
+On Bothost, the server uses the platform-provided `PORT` before
+`AI_LOGGER_SERVER_PORT` and binds to `0.0.0.0` by default when `PORT` is set.
+The internal port selected in the Bothost panel must match `PORT`. Check the
+runtime logs if the domain returns 502; a successful image build does not
+confirm the server process started.
 
 ## Key management
 

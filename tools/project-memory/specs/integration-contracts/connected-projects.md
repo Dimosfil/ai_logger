@@ -54,3 +54,19 @@ them for the current task.
 - Change procedure: follow AI Media Client's `AGENTS.md` before writes. Its
   required post-edit verification is `docker compose up -d --build`, service
   status, and `http://127.0.0.1:3000/api/health`.
+
+## Bothost Hosting
+
+- Public service URL: `https://ailogger.bothost.tech/`.
+- Role: intended public HTTPS gateway for the ai_logger HTTP service.
+- Source of truth for runtime state, routed port, environment, and deployment:
+  the Bothost application dashboard and runtime logs; this repository has no
+  configured deployment gateway or authenticated hosting connection.
+- Contract: Bothost routes HTTPS traffic to the container's internal `PORT`;
+  the server must bind to `0.0.0.0` and expose `/health`. A 502 on `/health`
+  means the gateway did not reach a healthy HTTP process. See
+  `docs/hosted-postgres.md` and the platform's web-app/domain documentation.
+- Current evidence (2026-09-29): public `/` and `/health` returned 502. The
+  exact remote runtime failure remains unverified without dashboard logs.
+- Privacy boundary: do not store dashboard credentials, database URLs, or
+  runtime logs in this register.

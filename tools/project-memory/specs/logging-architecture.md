@@ -48,6 +48,10 @@ bootstrap administrator token are private environment values. Hosted mode
 requires `AI_LOGGER_ADMIN_TOKEN`; startup fails without it. The records table
 stores normalized protocol JSON plus project, record ID, level, logger, and
 timestamps. `(project, record_id)` is unique for retry deduplication.
+The Docker image sets `AI_LOGGER_REQUIRE_POSTGRES=1` and requires both the
+database URL and an administrator token of at least 32 characters before any
+connection is attempted. This prevents a public hosted instance from starting
+in the legacy unauthenticated mode when environment variables are missing.
 Database connections require TLS. The supplied endpoint on port 16173 did
 not support SSL when checked on 2026-09-29, so live startup is blocked until
 the user provides a TLS-capable endpoint or secure tunnel. The tables already
@@ -62,6 +66,9 @@ can be bound to a project. Project binding is checked against
 JSONL browser and settings/search APIs require the administrator token in
 hosted mode. `/health` is public and reports storage unavailable with HTTP 503
 when PostgreSQL cannot be reached.
+For hosted routing, a platform `PORT` takes precedence over
+`AI_LOGGER_SERVER_PORT`; when `PORT` is present and no explicit host is set,
+the process binds to `0.0.0.0`. Local default remains `127.0.0.1:8765`.
 
 On `POST /ingest`, validate authorization, batch size, protocol records, and
 project binding before writing. Store all selected records in one PostgreSQL

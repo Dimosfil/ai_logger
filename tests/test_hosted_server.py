@@ -10,7 +10,7 @@ from urllib import error, request
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from ai_logger.aggregator import LogAggregator
-from ai_logger.server import create_server
+from ai_logger.server import _bind_address_from_env, _database_settings_from_env, create_server
 
 
 class FakeStore:
@@ -45,6 +45,33 @@ class FakeStore:
 
 
 class HostedServerTests(unittest.TestCase):
+    def test_platform_port_controls_the_bind_address(self):
+        self.assertEqual(_bind_address_from_env({}), ("127.0.0.1", 8765))
+        self.assertEqual(
+            _bind_address_from_env({"PORT": "3000", "AI_LOGGER_SERVER_PORT": "8765"}),
+            ("0.0.0.0", 3000),
+        )
+        self.assertEqual(
+            _bind_address_from_env({"AI_LOGGER_SERVER_HOST": "127.0.0.1", "PORT": "3000"}),
+            ("127.0.0.1", 3000),
+        )
+
+    def test_hosted_image_requires_database_and_strong_admin_token(self):
+        with self.assertRaisesRegex(RuntimeError, "DATABASE_URL"):
+            _database_settings_from_env({"AI_LOGGER_REQUIRE_POSTGRES": "1"})
+        with self.assertRaisesRegex(RuntimeError, "at least 32"):
+            _database_settings_from_env({
+                "AI_LOGGER_REQUIRE_POSTGRES": "1", "DATABASE_URL": "postgresql://example",
+                "AI_LOGGER_ADMIN_TOKEN": "short",
+            })
+        self.assertEqual(
+            _database_settings_from_env({
+                "AI_LOGGER_REQUIRE_POSTGRES": "1", "DATABASE_URL": "postgresql://example",
+                "AI_LOGGER_ADMIN_TOKEN": "x" * 32,
+            }),
+            ("postgresql://example", "x" * 32),
+        )
+
     def setUp(self):
         self.store = FakeStore()
         self.server = create_server("127.0.0.1", 0, aggregator=LogAggregator(),
