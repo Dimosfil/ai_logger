@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "configServiceUrl": "http://127.0.0.1:4100",
+  "registerWithConfigService": false,
+  "notes": [
+    "Copy this file into a project-local config path only when local instructions define that override.",
+    "Set registerWithConfigService to true only for applications that should publish their own service record on startup.",
+    "Do not commit machine-specific ports, secrets, tokens, cookies, passwords, or private production data."
+  ]
+}

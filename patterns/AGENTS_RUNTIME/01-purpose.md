@@ -33,6 +33,14 @@ notes, summaries, architecture docs, and selected chunks. Do not replace exact
 graph queries with embeddings, and verify current source files before editing
 because memory indexes can be stale.
 
+When deeper symbol, call-graph, Git-risk, or code-health analysis is useful,
+federate an optional provider through the project-local code-intelligence
+adapter. Keep project memory authoritative for requirements, decisions,
+business rules, workflows, exact project metadata, and durable notes. Keep the
+provider disabled unless configured, allowlist read-only tools, compare its
+indexed commit with current Git state, and fall back to current source when it
+is unavailable or stale. Follow `patterns/CODE_INTELLIGENCE_ADAPTERS.md`.
+
 Use Context7, when configured or explicitly requested, as an external current
 documentation retrieval layer for public library, framework, SDK, and API docs.
 Treat it as documentation lookup, not project memory, service discovery, task

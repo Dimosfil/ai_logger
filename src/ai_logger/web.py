@@ -18,7 +18,10 @@ from .records import LogRecord
 
 
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+PROBLEM_LOG_LEVELS = ("WARNING", "ERROR", "CRITICAL")
 DEFAULT_PROJECT = "default"
+SETTINGS_FILE_NAME = ".ai_logger_settings.json"
+DEFAULT_SETTINGS = {"collect_levels": {level: True for level in LOG_LEVELS}}
 
 
 @dataclass(frozen=True)
@@ -68,9 +71,47 @@ class WebLogRepository:
             "root": str(self.root_path),
             "exists": self.root_path.exists(),
             "levels": list(LOG_LEVELS),
+            "settings": self.settings(),
             "projects": sorted(projects.values(), key=lambda item: str(item["name"]).casefold()),
             "files": [file_ref.to_dict() for file_ref in files],
         }
+
+    def settings(self) -> dict[str, Any]:
+        settings = _default_settings()
+        try:
+            with self._settings_path().open("r", encoding="utf-8") as stream:
+                payload = json.load(stream)
+        except (OSError, json.JSONDecodeError):
+            return settings
+        if not isinstance(payload, dict):
+            return settings
+        collect_levels = payload.get("collect_levels")
+        if isinstance(collect_levels, dict):
+            for level in LOG_LEVELS:
+                if level in collect_levels:
+                    settings["collect_levels"][level] = bool(collect_levels[level])
+        return settings
+
+    def save_settings(self, payload: dict[str, Any]) -> dict[str, Any]:
+        settings = self.settings()
+        collect_levels = payload.get("collect_levels")
+        if isinstance(collect_levels, dict):
+            for level in LOG_LEVELS:
+                if level in collect_levels:
+                    settings["collect_levels"][level] = bool(collect_levels[level])
+        path = self._settings_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8") as stream:
+            json.dump(settings, stream, ensure_ascii=False, indent=2, sort_keys=True)
+            stream.write("\n")
+        return settings
+
+    def enabled_levels(self) -> set[str]:
+        collect_levels = self.settings()["collect_levels"]
+        return {level for level in LOG_LEVELS if collect_levels.get(level, True)}
+
+    def should_collect(self, record: LogRecord) -> bool:
+        return record.level.name in self.enabled_levels()
 
     def list_files(self, project: str | None = None) -> list[LogFileRef]:
         files = [
@@ -93,9 +134,11 @@ class WebLogRepository:
     ) -> list[LogRecord]:
         selected = self._select_files(project=project, file_name=file_name)
         needle = text.casefold().strip() if text else ""
+        enabled_levels = self.enabled_levels()
+        requested_levels = {level for level in (levels or enabled_levels) if level in enabled_levels}
         records: list[LogRecord] = []
         for file_ref in selected:
-            records.extend(_read_jsonl_records(file_ref.path, levels=levels, text=needle))
+            records.extend(_read_jsonl_records(file_ref.path, levels=requested_levels, text=needle))
         records = [
             record
             for _index, record in sorted(
@@ -202,9 +245,23 @@ class WebLogRepository:
             refs.append(_file_ref(project, path.name, path))
         return refs
 
+    def _settings_path(self) -> Path:
+        root = self.root_path.parent if self.root_path.is_file() else self.root_path
+        return root / SETTINGS_FILE_NAME
+
 
 def render_index_html() -> str:
     return INDEX_HTML
+
+
+def search_levels_for_filters(levels: set[str] | None, enabled_levels: set[str]) -> set[str]:
+    selected_levels = {level for level in (levels or enabled_levels) if level in enabled_levels}
+    problem_levels = {level for level in PROBLEM_LOG_LEVELS if level in enabled_levels}
+    return selected_levels | problem_levels
+
+
+def _default_settings() -> dict[str, Any]:
+    return {"collect_levels": {level: True for level in LOG_LEVELS}}
 
 
 def _file_ref(project: str, name: str, path: Path) -> LogFileRef:
@@ -316,6 +373,10 @@ INDEX_HTML = r"""<!doctype html>
     .list button { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; padding: 9px 10px; }
     .list button.active { border-color: var(--accent); background: #e4f3f2; }
     .count { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .settings { display: grid; gap: 8px; margin: 0 4px 10px; }
+    .check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .check input { width: auto; margin: 0; }
+    .settings button { width: 100%; }
     .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
     .level { min-width: 92px; }
     .level.active { color: #fff; border-color: transparent; }
@@ -362,6 +423,8 @@ INDEX_HTML = r"""<!doctype html>
         <button id="refreshBtn" title="Refresh">Refresh</button>
       </div>
       <div id="rootMeta" class="meta"></div>
+      <div class="section-title" data-i18n="collectionSettings">Collection</div>
+      <div id="collectionSettings" class="settings"></div>
       <div class="section-title" data-i18n="projects">Projects</div>
       <div id="projectList" class="list"></div>
       <div class="section-title" data-i18n="logFiles">Log files</div>
@@ -406,6 +469,10 @@ INDEX_HTML = r"""<!doctype html>
         refresh: "Refresh",
         projects: "Projects",
         logFiles: "Log files",
+        collectionSettings: "Collection",
+        collectPrefix: "Collect",
+        saveSettings: "Save",
+        settingsSaved: "Settings saved",
         allProjects: "All projects",
         missing: "Missing",
         askPlaceholder: "Ask AI about these logs",
@@ -435,6 +502,10 @@ INDEX_HTML = r"""<!doctype html>
         refresh: "Обновить",
         projects: "Проекты",
         logFiles: "Файлы логов",
+        collectionSettings: "Сбор логов",
+        collectPrefix: "Собирать",
+        saveSettings: "Сохранить",
+        settingsSaved: "Настройки сохранены",
         allProjects: "Все проекты",
         missing: "Нет пути",
         askPlaceholder: "Спросить ИИ об этих логах",
@@ -468,7 +539,7 @@ INDEX_HTML = r"""<!doctype html>
     const defaultUiLanguage = normalizeUiLanguage(
       savedUiLanguage || ((navigator.language || "").toLowerCase().startsWith("ru") ? "ru" : "en")
     );
-    const state = { overview: null, project: "", file: "", levels: new Set(), uiLanguage: defaultUiLanguage };
+    const state = { overview: null, project: "", file: "", levels: new Set(), settings: null, uiLanguage: defaultUiLanguage };
     const el = (id) => document.getElementById(id);
     const t = (key) => (translations[state.uiLanguage] || translations.en)[key] || translations.en[key] || key;
 
@@ -503,6 +574,7 @@ INDEX_HTML = r"""<!doctype html>
       document.documentElement.lang = state.uiLanguage;
       el("refreshBtn").textContent = t("refresh");
       document.querySelector("[data-i18n='projects']").textContent = t("projects");
+      document.querySelector("[data-i18n='collectionSettings']").textContent = t("collectionSettings");
       document.querySelector("[data-i18n='logFiles']").textContent = t("logFiles");
       el("aiQuery").placeholder = t("askPlaceholder");
       el("providerSelect").title = t("providerTitle");
@@ -524,6 +596,7 @@ INDEX_HTML = r"""<!doctype html>
 
     function renderSidebar() {
       el("rootMeta").textContent = state.overview.exists ? state.overview.root : `${t("missing")}: ${state.overview.root}`;
+      renderSettings();
       const projects = state.overview.projects;
       el("projectList").innerHTML = "";
       const allButton = document.createElement("button");
@@ -547,6 +620,32 @@ INDEX_HTML = r"""<!doctype html>
         button.onclick = () => { state.file = state.file === file.name ? "" : file.name; render(); loadLogs(); };
         el("fileList").appendChild(button);
       });
+    }
+
+    function renderSettings() {
+      state.settings = state.settings || state.overview.settings || { collect_levels: {} };
+      const collectLevels = state.settings.collect_levels || {};
+      el("collectionSettings").innerHTML = "";
+      state.overview.levels.forEach((level) => {
+        const label = document.createElement("label");
+        label.className = "check";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = collectLevels[level] !== false;
+        checkbox.onchange = () => {
+          state.settings.collect_levels = state.settings.collect_levels || {};
+          state.settings.collect_levels[level] = checkbox.checked;
+        };
+        const text = document.createElement("span");
+        text.textContent = `${t("collectPrefix")} ${level}`;
+        label.appendChild(checkbox);
+        label.appendChild(text);
+        el("collectionSettings").appendChild(label);
+      });
+      const save = document.createElement("button");
+      save.textContent = t("saveSettings");
+      save.onclick = saveSettings;
+      el("collectionSettings").appendChild(save);
     }
 
     function renderLevels() {
@@ -665,9 +764,27 @@ INDEX_HTML = r"""<!doctype html>
       el("content").innerHTML = `<div class="empty">${html(message)}</div>`;
     }
 
+    async function saveSettings() {
+      try {
+        const payload = await api("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(state.settings || { collect_levels: {} })
+        });
+        state.settings = payload;
+        if (state.overview) state.overview.settings = payload;
+        await loadLogs();
+        el("summary").className = "summary visible";
+        el("summary").innerHTML = `<strong>${html(t("settingsSaved"))}</strong>`;
+      } catch (error) {
+        renderError(error.message);
+      }
+    }
+
     async function loadOverview() {
       try {
         state.overview = await api("/api/overview");
+        state.settings = state.overview.settings;
         render();
         await loadLogs();
       } catch (error) {

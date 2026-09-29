@@ -13,6 +13,12 @@
   final answers, clarifying questions, and user-facing explanations. Do not use
   it to rewrite existing task text, code, commands, logs, quoted text, or a
   response language the user explicitly requested for a specific message.
+- Start final answers and direct user-facing explanations with the concrete
+  answer or decision whenever the user asked a question or needs an outcome.
+  Lead with `Yes`, `No`, `Exactly`, `Not yet`, the main conclusion, or the
+  requested status before caveats, evidence, context, or implementation
+  details. Put nuance and supporting detail after the direct answer so the user
+  can decide whether to keep reading.
 - Apply the configured project working-environment language order to
   agent-created or agent-updated project orientation documentation produced by
   `gi info` / `ги инфо`, including purpose, visible functionality, common

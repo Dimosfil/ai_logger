@@ -37,24 +37,32 @@
   the selected run, and keep completed runs compact. Follow
   `patterns/DEVELOPMENT_TOOL_PRODUCT_BOUNDARIES.md`.
 - Treat `tools/` as a place for project-owned development and agent tooling
-  only: scripts, adapters, bootstrap commands, deployment helpers, verification
-  helpers, agent-memory tooling, and redacted examples or manifests. Before
-  creating or moving any file under `tools/`, classify whether the file is
-  tooling or product material. Product runtime/source packages, product plugin
-  implementations, product tests, full product documentation, generated product
-  output, selected-run artifacts, uploaded site contents, screenshots, raw
-  exports, build bundles, downloaded datasets, and one-off work results must
-  not be placed under `tools/`. Put product code under the project's
-  source/package locations, tests under the test tree, product docs under
-  `README.md`/`docs/`/runbooks, and artifacts under project-local artifact,
-  evidence, output, data, docs-asset, build, or release locations documented by
-  the project. `tools/project-memory/` may contain compact
-  implementation-driving specifications and evidence references, but it must not
-  become the only product documentation layer or a home for source, tests,
-  runtime packages, generated outputs, or bulky evidence.
-  If a requested write would violate this boundary and no project-local tooling
-  contract explicitly allows it, stop and report the target-location blocker
-  instead of silently writing into `tools/`.
+  only: scripts, adapters, bootstrap commands, deployment helpers,
+  verification helpers, agent-memory tooling, and redacted examples or
+  manifests. Before creating or moving any file under `tools/`, classify
+  whether the file is tooling or product material. Product runtime/source
+  packages, product plugin implementations, product tests, full product
+  documentation, generated product output, selected-run artifacts, uploaded
+  site contents, screenshots, raw exports, build bundles, downloaded datasets,
+  and one-off work results must not be placed under `tools/`. Put product code
+  under the project's source/package locations, tests under the test tree,
+  product docs under `README.md`/`docs/`/runbooks, and artifacts under
+  project-local artifact, evidence, output, data, docs-asset, build, or release
+  locations documented by the project. `tools/project-memory/` may contain
+  compact implementation-driving specifications and evidence references, but
+  it must not become the only product documentation layer or a home for source,
+  tests, runtime packages, generated outputs, or bulky evidence.
+- Classify scripts by lifecycle and reuse, not by extension. A Python,
+  PowerShell, shell, or other executable created only to answer the current
+  research question, probe one environment, scrape one source, inspect one data
+  case, or run a throwaway diagnostic is one-off work, not durable tooling. Do
+  not place it in `tools/`, `tools/research/`, `tools/probes/`, or a similarly
+  named tooling subtree. Prefer an inline command; if a file is necessary, use
+  a documented ignored project scratch/temp location outside `tools/`, remove
+  it after use, and store only required outputs in the documented evidence or
+  artifact location. Promote a script into `tools/` only when it has a
+  project-owned reusable purpose, stable interface, documentation, and an
+  expected future caller.
 - Do not hard-code values that can change by deployment, user choice, runtime
   environment, host machine, service discovery, credentials, filesystem layout,
   feature flags, product names, demo data, workflow labels, generated artifact
@@ -77,6 +85,13 @@
   source of truth or temporary compatibility layer is genuinely undocumented.
   Follow
   `patterns/CONFIGURATION_BOUNDARIES.md`.
+- Classify external variables as startup-critical or optional by their actual
+  dependency. Give optional variables safe defaults, validate overrides, and
+  disable only the dependent backend/UI capability when an optional value is
+  absent or invalid. Keep the core running and surface a sanitized reason;
+  never use dummy credentials as valid defaults. Fail clearly for invalid
+  startup-critical values and cover them in local startup and tests. Follow
+  `patterns/CONFIGURATION_BOUNDARIES.md`.
 - Treat API keys and external-service tokens as secret boundaries, not ordinary
   config values. Keep them out of source, client bundles, public frontend env
   vars, logs, traces, chat, generated artifacts, and project memory; prefer
@@ -84,12 +99,22 @@
   managed production secret stores, scoped permissions, usage monitoring,
   rotation, and network restrictions where supported. Follow
   `patterns/API_KEY_SECRET_SAFETY.md`.
-- Build applications with clear architecture and code-quality boundaries. Apply
-  OOP, SOLID, DRY, clean-code, maintainability, and extensibility principles
-  where they fit the stack. Keep domain/product logic, orchestration, UI,
-  persistence, filesystem, external services, and configuration in separate
-  layers with explicit contracts. Follow
+- Do not turn a credential pasted into chat into a whole-task development
+  blocker. Warn once without repeating the value, recommend rotation, and keep
+  working on every independent step that can be completed without exposing or
+  unsafely persisting the credential. Block or leave unverified only the
+  specific operation that has no safe credential path.
+- Build applications with clear architecture and code-quality boundaries.
+  Choose the paradigm that fits the stack; apply SOLID, DRY, KISS, YAGNI, and
+  separation of concerns to classes, modules, functions, components, or systems
+  where they help. Keep domain/product logic, orchestration, UI, persistence,
+  filesystem, external services, and configuration behind explicit boundaries.
+  Record measurable quality goals and significant architecture tradeoffs. Follow
   `patterns/ARCHITECTURE_AND_CODE_QUALITY.md`.
+- For large modular systems, keep a project-local system map, module passports,
+  and public contracts. Coordinate agents through those contracts and verify an
+  assembled workflow. A module need not be a deployable service. Follow
+  `patterns/MODULAR_SERVICE_ENGINEERING.md`.
 - Treat senior agent behavior as a compact engineering execution standard, not
   as a separate personality label. Before code changes, agents should load
   relevant local context, preserve intended behavior, keep architecture and
@@ -101,8 +126,13 @@
   the smallest useful set of professional role lenses, such as product owner,
   tech lead, C#/.NET backend, frontend, UI/UX design, visual art, QA,
   DevOps/release, security, or documentation, then synthesize their input into
-  one accountable plan, implementation, or review. Add new reusable roles only
-  when repeated work shows a real specialty gap. Follow
+  one accountable plan, implementation, or review. When development begins,
+  infer and briefly propose the most useful lead role or smallest role set from
+  the project context after initial context loading; continue on an obvious
+  low-risk assumption and ask only when the role choice would materially change
+  scope, architecture, external systems, cost, data safety, or user-visible
+  behavior. Add new reusable roles only when repeated work shows a real
+  specialty gap. Follow
   `patterns/AGENT_ROLE_OFFICE.md`.
 - Treat startup-style product engineering as delivery of a working business
   outcome, not isolated code snippets. Agents should clarify business value,

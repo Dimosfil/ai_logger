@@ -9,7 +9,7 @@ from urllib import parse
 from .aggregator import LogAggregator
 from .config import build_server_aggregator_from_env
 from .records import LogRecord
-from .web import WebLogRepository, render_index_html
+from .web import WebLogRepository, render_index_html, search_levels_for_filters
 
 
 class LogIngestHandler(BaseHTTPRequestHandler):
@@ -38,12 +38,18 @@ class LogIngestHandler(BaseHTTPRequestHandler):
         if path.rstrip("/") == "/api/logs":
             self._send_json(HTTPStatus.OK, self._logs_payload(query))
             return
+        if path.rstrip("/") == "/api/settings":
+            self._send_json(HTTPStatus.OK, self.server.web_logs.settings())
+            return
         self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
     def do_POST(self) -> None:
         path, _query = self._path_and_query()
         if path.rstrip("/") == "/api/search":
             self._handle_search()
+            return
+        if path.rstrip("/") == "/api/settings":
+            self._handle_settings()
             return
         if path.rstrip("/") != "/ingest":
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
@@ -59,7 +65,9 @@ class LogIngestHandler(BaseHTTPRequestHandler):
             for item in records:
                 if not isinstance(item, dict):
                     raise ValueError("Each log record must be an object.")
-                self.server.aggregator.emit(LogRecord.from_dict(item))
+                record = LogRecord.from_dict(item)
+                if self.server.web_logs.should_collect(record):
+                    self.server.aggregator.emit(record)
                 count += 1
         except Exception as exc:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
@@ -103,11 +111,12 @@ class LogIngestHandler(BaseHTTPRequestHandler):
                 raise ValueError("Search query is required.")
             levels_value = payload.get("levels")
             levels = {str(level).upper() for level in levels_value} if isinstance(levels_value, list) else None
+            search_levels = search_levels_for_filters(levels, self.server.web_logs.enabled_levels())
             result = self.server.web_logs.search(
                 query=query,
                 project=_optional_str(payload.get("project")),
                 file_name=_optional_str(payload.get("file")),
-                levels=levels,
+                levels=search_levels,
                 max_records=int(payload.get("max_records") or 500),
                 top_k=int(payload.get("top_k") or 8),
                 use_llm=bool(payload.get("use_llm", True)),
@@ -118,6 +127,17 @@ class LogIngestHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
             return
         self._send_json(HTTPStatus.OK, result)
+
+    def _handle_settings(self) -> None:
+        try:
+            payload = self._read_payload()
+            if not isinstance(payload, dict):
+                raise ValueError("Settings payload must be an object.")
+            settings = self.server.web_logs.save_settings(payload)
+        except Exception as exc:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
+        self._send_json(HTTPStatus.OK, settings)
 
     def _path_and_query(self) -> tuple[str, dict[str, list[str]]]:
         parsed = parse.urlsplit(self.path)

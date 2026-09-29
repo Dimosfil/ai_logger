@@ -7,10 +7,9 @@ across stacks.
 ## Core Rule
 
 - Build applications with clear architecture and code-quality boundaries.
-- Understand and apply OOP, SOLID, DRY, clean-code, maintainability,
-  extensibility, and established architecture-pattern principles where they fit
-  the stack, including clean architecture, microservices, DDD, and equivalent
-  stack-appropriate patterns.
+- Choose a design approach that fits the problem, stack, and current constraints.
+  Apply OOP, SOLID, DRY, and established design and architecture patterns by
+  their intent rather than requiring classes or a particular architecture.
 - Prefer cohesive domain models, explicit interfaces at integration boundaries,
   dependency inversion for infrastructure, small composable modules, typed or
   validated contracts, low duplication, clear names, focused functions/classes,
@@ -22,6 +21,48 @@ across stacks.
   modules, functions, services, protocols, and data contracts.
 - Apply DRY to repeated knowledge and behavior, but do not create premature
   abstractions before the duplication has a clear shared meaning.
+
+## Principles Across Paradigms
+
+- Apply separation of concerns and single responsibility to units that change
+  for different reasons, whether they are classes, modules, functions,
+  components, or systems. Keep related behavior together.
+- Apply the open-closed principle at proven variation points: extend behavior
+  through a stable contract when that avoids changing unrelated working code.
+  Do not build extension mechanisms for hypothetical variants.
+- Apply the Liskov substitution principle when one implementation replaces
+  another: preserve the caller's expected inputs, outputs, errors, side effects,
+  and invariants. Test interchangeable implementations against the same contract.
+- Keep interfaces and data contracts limited to what their consumers need.
+  Depend on abstractions at meaningful boundaries, especially for external
+  systems; avoid an interface for every class or function.
+- Apply DRY to duplicated knowledge, rules, and behavior with the same meaning.
+  Keep the design as simple as the current requirements allow (KISS); defer
+  speculative features and abstractions until they have a concrete use (YAGNI).
+- Prefer composition for combining independent capabilities. Use inheritance
+  when a stable subtype relationship and its behavioral contract make it the
+  simpler choice. Keep component responsibilities and interactions explicit.
+- Limit a unit's knowledge of other units' internals (Law of Demeter). Review
+  navigation through another unit's mutable internals for unnecessary coupling;
+  a call chain alone is not proof of a design problem.
+- In object-component designs, compose behavior from focused components
+  without requiring a deep class hierarchy. In entity-component-system (ECS)
+  designs, keep entity identity, component data, and system behavior distinct;
+  define data ownership, access, and system ordering according to the framework.
+  Apply the principles above to those boundaries without forcing OOP structure.
+
+## Quality And Architecture Evidence
+
+- Record the quality attributes that matter for the product, such as reliability,
+  performance, security, usability, and maintainability, as observable criteria
+  when they affect an architecture decision. Use
+  [ISO/IEC 25010:2023](https://committee.iso.org/standard/78176.html) as a
+  reference model for choosing attributes, without claiming conformance.
+- For significant decisions, record the relevant stakeholders and concerns,
+  chosen boundaries, alternatives, tradeoffs, and verification evidence in the
+  project's architecture notes or decision record. Use
+  [ISO/IEC/IEEE 42010:2022](https://www.iso.org/standard/74393.html) as a
+  reference for describing architecture; scale the detail to the decision.
 
 ## Work Type Boundaries
 
@@ -58,6 +99,10 @@ across stacks.
   architecture, hexagonal/ports-and-adapters, clean architecture,
   domain-driven design, microservices, feature modules, MVC/MVVM, repository
   adapters, command handlers, and explicit service contracts.
+- Use GoF, GRASP, and similar design patterns by intent, not by name-dropping:
+  identify the force they solve, such as object creation, dependency direction,
+  variation, orchestration, state, or responsibility assignment, then choose the
+  simplest pattern that preserves clarity.
 - Preserve user-visible behavior during refactors unless the user explicitly
   changes the agreement.
 
@@ -111,6 +156,8 @@ Before finishing architecture-sensitive work, check the changed area for:
   those as development or operational work;
 - new abstractions that add ceremony without reducing duplication or protecting
   an important boundary.
+- design-pattern usage that obscures simple behavior, duplicates framework
+  conventions, or exists only because a pattern could be applied.
 
 ## Verification
 

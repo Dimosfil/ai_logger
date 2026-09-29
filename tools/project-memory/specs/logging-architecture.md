@@ -114,6 +114,13 @@ reads JSON Lines logs from `AI_LOGGER_WEB_LOGS_ROOT`, then falls back through
 `ProjectDailyJsonLinesPlugin` layout: `<root>/<project>/YYYY-MM-DD.jsonl`.
 The `/api/logs` read order is newest first, with later records from the same
 timestamp displayed above earlier records.
+The web UI exposes persisted collection settings at `/api/settings`. Settings
+are stored next to the configured web log root in `.ai_logger_settings.json` and
+survive server restarts. `collect_levels` is a per-level boolean map for
+`DEBUG`, `INFO`, `WARNING`, `ERROR`, and `CRITICAL`; disabled levels are not
+accepted from `/ingest` and are excluded from read/search APIs. These settings
+control collection, while the level buttons above the log table remain a
+display filter for the current view.
 When no DeepSeek key is configured, `/api/search` must keep working through
 bounded local candidate ranking and return a warning instead of exposing or
 requesting a secret in the browser.
@@ -124,6 +131,11 @@ for the selected project/file/level scope, `/api/search` may send those recent
 records to the configured LLM provider so questions such as "what broke in this
 bot?" still receive an evidence-backed answer instead of stopping at an empty
 local search result.
+When a browser user asks AI from a visually filtered view, the server must still
+include enabled `WARNING`, `ERROR`, and `CRITICAL` records in the analysis
+scope. The UI display filter must not hide new errors, problems, or crashes
+from `/api/search`; only explicitly disabled collection levels may exclude
+those records.
 
 `LogIngestHttpServer` is the server-side entry point. It accepts JSON
 `LogRecord` payloads at `/ingest`, optionally verifies a bearer token, restores

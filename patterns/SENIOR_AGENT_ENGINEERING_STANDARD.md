@@ -52,6 +52,8 @@ and leave durable knowledge updated when behavior or architecture changes.
 - Verify before reporting completion. Reread edited files, run the fastest
   relevant checks first, and broaden verification when the blast radius or
   project contract requires it.
+- Once sufficient checks pass, continue toward completion; repeat or broaden
+  checks only for new changes, failures, unresolved concerns, or required gates.
 - Check source-of-truth consistency across touched layers when changing a
   default, policy, workflow, behavior contract, data shape, integration, or
   architecture boundary.
@@ -63,6 +65,9 @@ and leave durable knowledge updated when behavior or architecture changes.
   secret handling, production data, broad filesystem access, public API or
   storage contract changes, and unclear migrations require the documented
   approval or clarification path.
+- Check existing session authorization before requesting approval again for
+  the same action, target, and scope. Prepare authorized work first, hold the
+  dependent operation when approval is required, and continue independent work.
 - Report results at the right level: what changed, what was verified, what
   remains risky or intentionally deferred, and where the authoritative source
   now lives.

@@ -23,10 +23,28 @@ only in source-only files, or only in copied templates.
 - `migrations/`: ordered accepted upgrade steps.
 - `tools/project-memory/instruction-kit.json`: project-local installed version,
   canonical `source_repo`, optional checkout/cache path, copied files, and
-  applied migrations.
+  compact migration state.
 
 Fresh bootstraps should treat the copied version as a baseline and record all
 migrations included in that version as already applied.
+
+## Startup Auto-Application Contract
+
+- `update_check.enabled: true` authorizes the first-concrete-task startup check
+  to resolve the accepted source and apply pending accepted migrations.
+- `auto_apply_pending_migrations` defaults to `true` when absent so older
+  installed metadata remains eligible for automatic application. New metadata
+  should record it explicitly under `update_check`.
+- An agent must not treat the lack of a separate user command, confirmation, or
+  explicit `auto_apply_pending_migrations` field as a blocker. A detected newer
+  version must lead to migration application or a named concrete blocker, not
+  only an availability notice.
+- Automatic application may be skipped only when `update_check.enabled` or
+  `auto_apply_pending_migrations` is explicitly `false`, or when source access,
+  write permissions, repository scope, safety, unrelated dirty-file overlap, or
+  a merge conflict prevents a safe update.
+- Apply and verify file changes before advancing migration metadata. This
+  authorization does not turn helper-script `-Apply` into a metadata shortcut.
 
 ## Project Command
 
@@ -72,8 +90,14 @@ the agent should:
 6. Read only accepted release artifacts from the checkout/cache: `VERSION.md`,
    `CHANGELOG.md`, `INDEX.md`, and relevant files under `migrations/`.
 7. Do not read `updates/`.
-8. Identify migrations that are not listed in `applied_migrations`.
-9. Apply pending migrations in filename order.
+8. Identify migrations after `migration_state.applied_through`, plus explicit
+   skipped items, excluding explicit additional applied IDs. Equal installed
+   and accepted versions may use the zero-pending fast path only when the
+   explicit skipped list is empty. When schema v2 is absent, continue reading
+   the legacy `applied_migrations` array.
+9. Compare and order migration IDs by their numeric version prefix, then by the
+   full ID as an ordinal tie-breaker; do not use plain lexical comparison for
+   versions such as `.9` and `.10`. Apply pending migrations in that order.
 10. Merge project-owned files carefully; do not overwrite project-specific
    content without review.
 11. Update `instruction-kit.json` only after successful application.
@@ -129,6 +153,9 @@ migrations as applied before file changes are actually made.
 - Use an explicit metadata command such as `-RecordApplied` only after the agent
   has applied the migration instructions, reread the changed files, and run the
   relevant checks.
+- Successful recording should write migration-state schema v2 with an
+  `applied_through` checkpoint and explicit addition/skip arrays, then remove
+  the legacy full-history array. Continue accepting legacy input.
 - If metadata was advanced too early, compare local instruction files against
   the migration requirements, apply missing changes, and correct
   `tools/project-memory/instruction-kit.json` before reporting the project up to

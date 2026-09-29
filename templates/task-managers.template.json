@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "managers": [
+    {
+      "id": "worknest",
+      "enabled": false,
+      "service_id": "worknest",
+      "workspace": "TODO",
+      "project": "TODO",
+      "intake_mode": "raw",
+      "notes": "Store only the selected manager name/service_id and non-secret project preferences here. Resolve runtime URLs through GI config-service."
+    }
+  ]
+}

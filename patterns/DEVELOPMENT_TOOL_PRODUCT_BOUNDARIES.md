@@ -18,28 +18,36 @@ comparison to a named repository or product.
 
 - Treat every product, demo, customer, project type, task, workflow run, and
   generated artifact as replaceable input or output.
-- Before creating or moving any file under `tools/`, classify whether it is
-  tooling or product material.
 - Use `tools/` for durable development tooling, automation scripts, adapters,
   bootstrap commands, deployment helpers, verification helpers, agent-memory
   tooling, and redacted example manifests. Before writing under `tools/`,
   classify the file as tooling or product material. Product runtime/source
   packages, product plugin implementations, product tests, full product
-  documentation, generated product output, selected-run artifacts, uploaded site
-  contents, screenshots, raw exports, build bundles, downloaded datasets, and
-  one-off work results do not belong under `tools/` merely because an agent or
-  script created them. Store product source in the project source/package tree,
-  tests in the test tree, product documentation in `README.md`, `docs/`, or
-  runbooks, and generated/evidence files in project-local artifact, evidence,
-  output, data, docs-asset, build, or release locations documented by the
-  project.
+  documentation, generated product output, selected-run artifacts, uploaded
+  site contents, screenshots, raw exports, build bundles, downloaded datasets,
+  and one-off work results do not belong under `tools/` merely because an agent
+  or script created them. Store product source in the project source/package
+  tree, tests in the test tree, product documentation in `README.md`, `docs/`,
+  or runbooks, and generated/evidence files in project-local artifact,
+  evidence, output, data, docs-asset, build, or release locations documented by
+  the project.
+- File type does not establish durability. A `.py`, `.ps1`, shell script, or
+  other executable made for one research question, environment probe, scrape,
+  data inspection, or temporary diagnostic is a one-off work file. Do not put
+  it under `tools/`, including convenient-looking subtrees such as
+  `tools/research/`, `tools/probes/`, or `tools/scratch/`, unless that subtree is
+  an already documented reusable subsystem and the new script satisfies its
+  stable contract. Prefer inline execution; otherwise use a documented ignored
+  scratch/temp location outside `tools/`, remove the script after use, and keep
+  only necessary evidence or outputs in their documented artifact location.
+- Promote a script to durable tooling only when the project has an expected
+  future caller, reusable project-owned behavior, a stable invocation contract,
+  and enough documentation or verification to maintain it. A useful result in
+  the current task alone is not sufficient.
 - Treat `tools/project-memory/` as a narrow exception for compact
   implementation-driving specifications, decisions, contracts, and evidence
   references used by agents. It is not a source package, plugin directory,
   product test tree, full documentation site, artifact bucket, or dump folder.
-- If a requested write would violate this boundary and no project-local tooling
-  contract explicitly allows it, stop and report the target-location blocker
-  instead of silently writing into `tools/`.
 - Do not let one selected request, run, generated artifact, or debugging
   example define the generic runtime contract. Extract the reusable behavior and
   keep the concrete case as replaceable task data, fixture data, or documented
@@ -116,8 +124,9 @@ for:
 - fixed repository, folder, or artifact slugs;
 - generated or downloaded outputs written below `tools/` without an explicit
   project-local tooling contract that marks them as small reviewable manifests;
-- product source packages, plugin implementations, tests, or full product docs
-  written below `tools/`;
+- product runtime/source packages, plugin implementations, tests, or full
+  product docs placed under `tools/` instead of source, test, or documentation
+  locations;
 - fixed stack choices that should come from task data;
 - fixed ports, URLs, service IDs, or dashboard links;
 - UI copy that names a generated product instead of the runtime feature;

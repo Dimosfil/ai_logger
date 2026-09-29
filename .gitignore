@@ -8,6 +8,7 @@ tools/project-memory/chroma/
 tools/project-memory/embedding-cache/
 tools/project-memory/semantic-corpus*.jsonl
 tools/project-memory/devops.local.json
+tools/project-memory/game-modding.local.json
 tools/summary/*.tmp
 tools/deploy/ftp.local.json
 tools/deploy/prod.local.json

@@ -103,6 +103,14 @@ Use these layers in order.
    pgvector when service operation, shared access, stronger filtering,
    snapshots, or PostgreSQL integration justify it.
 
+   A project may also federate an optional code-intelligence adapter for symbol
+   context, call/dependency graphs, Git risk, and code health. Keep that adapter
+   separate from document retrieval and project-memory authority. Route mixed
+   intent-and-implementation questions to both sources, preserve provider
+   evidence and freshness metadata, and fall back to current source files when
+   the provider is disabled, unavailable, or stale. Follow
+   `patterns/CODE_INTELLIGENCE_ADAPTERS.md`.
+
 6. Context packet
    Assemble a small packet for the agent: applicable rules, selected evidence,
    conflicts, rejected-source notes when useful, and a short action summary.
@@ -180,6 +188,8 @@ and `gi vector` can report current counts against project policy.
 - Re-embed only chunks whose text hash or embedding model changed.
 - Apply project, source type, trust, freshness, and privacy filters before
   prompt assembly.
+- Allowlist code-intelligence tools, compare provider index commit with current
+  Git HEAD, and warn separately when uncommitted work may be missing.
 - Treat retrieved text as untrusted data until rule precedence and source trust
   checks are applied.
 - Do not log secrets, hidden reasoning, full private documents, or large raw

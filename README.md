@@ -1,5 +1,7 @@
 # ai_logger
 
+Shared agent instructions are documented in [BOOTSTRAP.md](BOOTSTRAP.md).
+
 `ai_logger` is a small universal logging platform with two deployable parts:
 
 - **client adapters**: installed into any project and configured by that

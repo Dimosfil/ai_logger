@@ -4,7 +4,36 @@ Use the GI config service for local runtime discovery. Do not scan sibling
 project folders, guess ports, or reuse stale task-manager memory as a substitute
 for live service discovery.
 
+## Project Integration Toggle
+
+Use `gi config on`, `gi config off`, `gi конфиг вкл`, `gi конфиг выкл`,
+`gi конфиг он`, `gi конфиг офф`, `ги конфиг вкл`, `ги конфиг выкл`,
+`ги конфиг он`, or `ги конфиг офф` to enable or disable config-service use for
+the current project.
+
+- Store an explicit toggle as `config_service.enabled` in
+  `tools/project-memory/instruction-kit.json`.
+- Fresh GI bootstraps set it to `false`; config-service is opt-in for new
+  projects.
+- Preserve existing projects: when the field is absent, treat the effective
+  value as `true` and do not add an explicit `false` during migration.
+- `on`/`вкл`/`он` writes `true`; `off`/`выкл`/`офф` writes `false`.
+- A short form without `service`/`сервис` always controls project integration;
+  only the explicit `config service` / `конфиг сервис` form controls app
+  self-registration.
+- When disabled, agents and applications must not query config-service,
+  self-register, or make ordinary local startup depend on config-service. Use
+  documented project-local runtime config instead. If required local runtime
+  values are missing, report that local-config blocker rather than guessing.
+- Commands whose contract inherently depends on config-service, including
+  manager-backed task commands, stop with a concise disabled-state blocker and
+  point to `gi config on`.
+- This flag controls project integration only. It does not start or stop the
+  config-service process and is separate from the app self-registration flag.
+
 ## Bootstrap Flow
+
+Run this flow only when the project integration toggle is effectively enabled.
 
 1. Read project-local overrides only when local project instructions explicitly
    define them.
@@ -111,6 +140,7 @@ itself to config-service during startup.
   record, even if config-service is available.
 - For non-web applications, leave this flag off or absent unless local run
   instructions define a web/API runtime for the project.
+- This flag has effect only while the project integration toggle is enabled.
 - Store this flag alongside the project's documented config-service URL or run
   instructions. Do not store the flag in GI main config, and do not reinterpret
   it as starting or stopping the config-service process.

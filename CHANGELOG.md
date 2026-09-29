@@ -2,6 +2,191 @@
 
 Accepted changes for the shared instruction library.
 
+## 2026.09.28
+
+- Added guidance for building large modular services with agents: system maps,
+  module passports, public contracts, coordinated ownership, assembled workflow
+  verification, and safe module evolution. Added three copyable templates and
+  installer support. Migration:
+  `2026.09.28.2__add_modular_service_agent_guidance`.
+- Classified external settings as optional or startup-critical. Optional
+  integrations now require safe disabled defaults, validated overrides, and
+  isolated backend/UI unavailability for invalid configuration; critical core
+  settings require clear startup failure and local startup/test coverage.
+  Migration: `2026.09.28.1__isolate_optional_config_failures`.
+
+## 2026.09.27
+
+- Required focused project-memory specs to distinguish current, planned, and
+  historical behavior when ambiguous, with a last-check date and source/test
+  evidence for current implementation claims. Adding, renaming, moving, or
+  retiring a spec now updates the project-memory index and verifies its links
+  during implementation. Migration:
+  `2026.09.27.3__label_spec_status_and_maintain_index`.
+- Clarified that feature-contract writeback and verification happen during
+  implementation. Git-finish commands perform the requested Git operation and
+  compact Git safety checks; they do not launch a project-memory audit or
+  product test cycle. Migration
+  `2026.09.27.2__keep_git_finish_git_only` supersedes the Git-finish portion of
+  `.1` below.
+- Added a scoped contract check before completing meaningful implementation
+  work and before staging it for commit or push. Agents compare changed
+  behavior and architecture with source, tests, focused project-memory specs,
+  and affected user documentation; missing authorized writeback is completed
+  before Git finish, while out-of-scope gaps stop the finish. Kept project
+  memory compact by linking source and evidence instead of duplicating them.
+- Routed `ги пуш` and related Git finish commands through the contract check,
+  added a route regression assertion, and propagated the guidance in migration
+  `2026.09.27.1__verify_contracts_before_git_finish` (Git-finish gate superseded
+  by `.2`).
+
+## 2026.09.22
+
+- Restricted Git-finish commands to finalizing an already established task
+  scope. Agents may no longer infer that an entire dirty worktree is one package
+  from apparent similarity or turn `gi пуш` into implementation, test rewrites,
+  runtime cleanup, or service restart/rebuild work merely to make checks pass.
+  Ambiguous scope and unrelated verification failures now stop the finish before
+  staging or writes.
+- Completed Cyrillic-prefix parity for every Russian-language GI route alias,
+  including `ги пуш`, and added a manifest-wide regression check so future
+  `gi <Russian command>` aliases require the matching `ги` form.
+- Hardened the lazy GI context pipeline after regression review. Startup output
+  now enforces per-section and total character ceilings, propagates update-check
+  failures, preserves clean CRLF Git state, and includes `BOOTSTRAP.md` in fresh
+  installs. Migration comparison is semantic, equal-version checks honor
+  explicit skips, and all documented plan/test/task-manager aliases resolve.
+- Restored the accumulated startup/restore behavior inside the one-call context
+  builder. `gi start` now lazily includes bounded project instructions and
+  working agreements, language preferences, the newest canonical handoff,
+  compact Git state, runbook command hints, and the project-memory search hint.
+  Regression tests cover the restored sections, canonical summary selection,
+  and the combined start-packet budget.
+- Added a compact runtime-context pipeline: 07/08/09 operational rules are now
+  split into focused modules, root and copied `AGENTS.md` entrypoints are size
+  bounded, and `tools/get-gi-context.ps1` returns update status, routed command
+  context, and bounded start-state evidence in one invocation.
+- Replaced the ever-growing `applied_migrations` array with migration-state
+  schema v2 (`applied_through`, explicit additions, and skips) while retaining
+  legacy metadata reads. Added executable byte/packet budgets so future changes
+  cannot silently restore large startup context.
+- Replaced whole-file `COMMANDS.md` loading for specific GI commands with a
+  deterministic longest-prefix route manifest and one-call context resolver.
+  `COMMANDS.md` is now a compact help index; the resolver returns only the
+  selected contract and mandatory policy files, while the previous detailed
+  command wording remains available as a maintenance reference.
+- Added a two-stage startup update check. Equal installed and accepted versions
+  now return `pending migrations: 0` without reading changelog, index, migration
+  directory entries, or migration bodies. A newer accepted version enumerates
+  and loads only unapplied migration files.
+- Added regression coverage for alias precedence, routed-file existence,
+  command-index size, copied-project routing, and equal/newer update paths in
+  migration `2026.09.22.1__add_lazy_gi_routing_and_staged_update_check`.
+
+## 2026.09.05
+
+- Removed unconditional goal-confirmation pauses for clear bounded tasks.
+  Reuse authorization for the same action, target, and scope; clarify only
+  material unknowns, prepare authorized work before approval, and limit blockers
+  to affected operations. Preserve explicit safety and approval requirements.
+- Calibrated verification to affected behavior, risk, and required project gates.
+  After sufficient checks pass, repeat or broaden only for new changes, failures,
+  unresolved concerns, or mandatory gates. Updated live rules, copied templates,
+  and migration `2026.09.05.1__scope_approval_and_verification_gates`.
+
+## 2026.08.06
+
+- Added a provider-neutral, optional code-intelligence layer for symbol context,
+  call/dependency graphs, Git-aware risk, and code-health evidence. Project
+  memory remains authoritative for requirements, decisions, workflows, and
+  durable project facts. The stdlib MCP bridge is disabled by default, enforces
+  a read-only tool allowlist, reports index/HEAD/dirty-worktree freshness, keeps
+  generated indexes ignored, and uses Repowise only as the first tested adapter
+  rather than a hard dependency.
+
+## 2026.08.05
+
+- Prohibited adding, staging, committing, or pushing LLM/model weights and
+  checkpoints, photos, video, audio, datasets, archives, and similar large
+  binary content payloads. Projects must keep such content in artifact or
+  object storage outside Git, track only compact manifests, URLs, checksums, or
+  retrieval instructions, inspect new and unusually large files before staging,
+  and require explicit user approval for any exact project-specific exception.
+
+## 2026.08.02
+
+- Added the project-level `gi config on/off`, `ги конфиг вкл/выкл`, and
+  `ги конфиг он/офф` toggle aliases, with short forms explicitly taking
+  precedence over the app self-registration command.
+  Fresh GI projects now keep config-service integration disabled by default,
+  while existing projects without the new field retain their legacy enabled
+  behavior. The existing `gi config service on/off` command remains the
+  separate application self-registration toggle.
+
+- Added a follow-up compatibility migration so projects that already observed
+  or applied version `2026.08.02.1` still receive the `он/офф` aliases and the
+  unambiguous short-form precedence rule.
+
+## 2026.07.15
+
+- Prevented pasted credentials from blocking an entire development task. Agents
+  now warn once without repeating the value, recommend rotation, continue all
+  independent safe work, and limit any blocker or unverified status to the
+  specific authenticated operation that lacks a safe credential path.
+
+## 2026.07.14
+
+- Made first-task GI migration application explicit: an enabled update check
+  authorizes applying pending accepted migrations, missing auto-apply metadata
+  defaults to enabled for older installations, and agents may not stop at an
+  “update available” notice without applying or naming a concrete blocker.
+
+## 2026.07.13
+
+- Clarified that executable file type does not make a script durable tooling.
+  Single-task research probes, exploratory scripts, ad hoc collectors, scrapers,
+  and throwaway diagnostics must stay out of `tools/` and its convenient-looking
+  research/probe/scratch subtrees; agents should prefer inline execution or a
+  documented ignored temporary location outside `tools/`.
+
+- Added a Git finalization boundary: agents must complete task-scoped tracked
+  writes before staging, recheck the worktree after the last mutation and
+  commit/push, and must not infer a clean finish from matching local and remote
+  HEAD values while an uncommitted task diff remains.
+
+## 2026.07.10
+
+- Hardened the GI bootstrap entrypoint for canonical GitHub URLs, Markdown
+  links, short repository names, and local checkouts. The root README and new
+  `BOOTSTRAP.md` now expose the contract before Git classification, and a
+  portable PowerShell installer plus regression checks create the local kit
+  without changing Git configuration or requiring a machine-specific drive.
+
+## 2026.07.08
+
+- Added `gi mod` / `ги мод` game-modding path handling. Agents must distinguish
+  the mod project root, selected game install root, mod install folder, and
+  logs folder; record machine-local game paths only in ignored local config; and
+  ask for the game install root with a concrete save location when it cannot be
+  proven locally.
+
+- Added development role suggestion behavior. After initial project context
+  loading for a development effort, agents should infer and briefly propose the
+  most useful lead role or smallest role set from the project goal, stack,
+  docs, memory, manifests, and requested work, while continuing on obvious
+  low-risk assumptions and revisiting roles only after meaningful pivots.
+
+- Expanded startup product engineering expectations for senior backend/product
+  work. Agents should treat C#/.NET concurrency, LLM/RAG integration,
+  PostgreSQL persistence, GoF/GRASP design-pattern use, and GitLab-style CI/CD
+  as architecture-sensitive areas that require current project context,
+  explicit contracts, proportional design, and focused verification.
+
+- Added answer-first response style. Agents should start final answers and
+  direct user-facing explanations with the concrete answer, decision, main
+  conclusion, or requested status before caveats, evidence, and detailed
+  context, so users can see the actionable answer immediately.
+
 ## 2026.07.07
 
 - Added `gi logic` / `ги логика` for project-logic recovery and adoption. With

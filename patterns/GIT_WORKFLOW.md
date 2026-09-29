@@ -45,21 +45,52 @@ language preferences.
 - Treat dirty worktrees as normal.
 - Do not revert user changes unless the user explicitly asks.
 - Keep changes scoped to the current task.
+- A Git-finish command authorizes Git finalization, compact read-only inspection,
+  and proportionate verification of an already established task scope. It does
+  not authorize new product implementation, test-expectation rewrites, runtime
+  or service repair, dependency changes, broad cleanup, or other tracked-file
+  edits merely to make the worktree or verification clean.
+- Derive finish scope only from the active task in the current conversation or
+  an explicit user-selected path/change set. Never infer that all dirty files
+  form one task because they appear related, were modified recently, or can be
+  made to pass together. If no unambiguous active task scope exists, stop before
+  staging or writes and ask the user to identify what should be committed.
 - Do not commit secrets, credentials, local databases, logs, or generated
   caches.
+- Never add, stage, commit, or push content payloads such as LLM or other model
+  weights/checkpoints, photos, video, audio, datasets, archives, or similar
+  large binary artifacts. Keep them in project-approved artifact or object
+  storage outside Git. Commit only compact manifests, source URLs, checksums,
+  or retrieval instructions, and add project-local ignore rules that prevent
+  the prohibited content from being staged again. An exception requires the
+  user's explicit approval of the exact content and Git storage approach for
+  the current project.
 - Prefer `git diff --stat` and targeted file checks over full diff dumps.
 
 ## Finish Workflow
 
 Before any `gi коммит`, `gi пуш`, `gi коммит пуш`, or `gi только пуш` action:
 
+- finish every task-scoped filesystem write first, including project-memory,
+  handoff, generated metadata, formatting, and verification-driven corrections;
+  do not create or update a tracked task artifact after staging or committing;
 - inspect `git status --short`;
+- inspect untracked and unusually large files before staging and exclude
+  prohibited model/media/content payloads; add an ignore rule during Git finish
+  only when the payload was created by the active scoped task or the ignore
+  change was already authorized, otherwise leave it unstaged and report it;
 - inspect staged and unstaged changes with compact stats or targeted checks;
 - identify the current branch and configured remote;
 - keep user/unrelated changes out of the commit;
 - stop and explain the blocker if scope is ambiguous, conflicts are present,
   secrets may be included, the project is not a git repository, no remote is
   configured for a push, or push fails.
+- Do not start a project-memory audit, feature work, or new product test cycle
+  solely because Git finish was requested. Implementation work completes its
+  own writeback and verification. Follow a more specific project-local
+  finish-time gate when one is expressly required; a failing gate does not
+  authorize unrelated code or test repairs, runtime deletion, or service
+  rebuilds/restarts.
 
 For `gi коммит`:
 
@@ -80,6 +111,22 @@ For `gi только пуш`:
 - do not stage files;
 - do not create a commit;
 - push only already committed local work on the current branch.
+
+After the last commit or push and before the success response:
+
+- run a final `git status --short` after the last filesystem mutation;
+- verify the resulting commit contains every intended task-scoped tracked
+  change, and for a push verify the local branch matches its configured
+  upstream;
+- distinguish pre-existing unrelated dirt from new task-scoped residue; never
+  claim a clean worktree merely because local and remote HEAD match;
+- if a required task file was changed after the commit, do not silently leave
+  it behind or report full success: include it through the authorized finish
+  workflow before pushing, or report the exact uncommitted remainder and the
+  operation as incomplete;
+- do not mutate tracked task files after this final status check. If another
+  mutation becomes necessary, repeat verification and the applicable authorized
+  finish workflow before responding.
 
 ## Pull Workflow
 

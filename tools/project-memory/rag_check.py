@@ -100,16 +100,21 @@ def chunking_enabled(config: dict[str, Any]) -> bool:
 
 def check_git_ignored(root: Path, path: Path) -> bool:
     relative = rel(root / path, root)
-    try:
-        subprocess.check_call(
-            ["git", "check-ignore", "-q", "--", relative],
-            cwd=root,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        return True
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        return False
+    candidates = [relative, f"{relative.rstrip('/')}/.gi-ignore-check"]
+    for candidate in candidates:
+        try:
+            subprocess.check_call(
+                ["git", "check-ignore", "-q", "--", candidate],
+                cwd=root,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return True
+        except subprocess.CalledProcessError:
+            continue
+        except FileNotFoundError:
+            return False
+    return False
 
 
 def sqlite_counts(root: Path, db_path: Path) -> tuple[dict[str, int | str | bool], list[Check]]:
@@ -271,6 +276,35 @@ def chroma_count(root: Path, config: dict[str, Any]) -> tuple[dict[str, int | st
     return {"records": count, "collection": collection_name}, checks
 
 
+def code_intelligence_checks(root: Path, config: dict[str, Any]) -> list[Check]:
+    section = config.get("code_intelligence")
+    if section is None:
+        return [Check("WARN", "Optional code_intelligence config section is absent")]
+    if not isinstance(section, dict):
+        return [Check("FAIL", "code_intelligence config must be an object")]
+    try:
+        sys.path.insert(0, str((root / "tools/project-memory").resolve()))
+        from code_intelligence import validate_config  # type: ignore[import-not-found]
+    except Exception as exc:
+        return [Check("FAIL", f"Could not load code-intelligence config validator: {exc}")]
+
+    errors = validate_config(section)
+    if errors:
+        return [Check("FAIL", f"Code-intelligence config: {error}") for error in errors]
+    enabled = bool(section.get("enabled", False))
+    checks = [Check("OK", f"Code-intelligence config valid; enabled={str(enabled).lower()}")]
+    generated = section.get("generated_paths") or []
+    if not isinstance(generated, list):
+        return checks + [Check("FAIL", "code_intelligence.generated_paths must be an array")]
+    for value in generated:
+        path = Path(str(value))
+        if check_git_ignored(root, path):
+            checks.append(Check("OK", f"Code-intelligence generated path is git-ignored: {path.as_posix()}"))
+        else:
+            checks.append(Check("FAIL", f"Code-intelligence generated path is not git-ignored: {path.as_posix()}"))
+    return checks
+
+
 def run_health(args: argparse.Namespace) -> int:
     root = repo_root()
     config_path = root / args.config
@@ -280,6 +314,8 @@ def run_health(args: argparse.Namespace) -> int:
     for section in ["source_groups", "exclude_globs", "structured_memory", "keyword_retrieval", "chunking"]:
         if section not in config:
             checks.append(Check("FAIL", f"Config section is missing: {section}"))
+
+    checks.extend(code_intelligence_checks(root, config))
 
     sqlite_info: dict[str, int | str | bool] = {}
     corpus_info: dict[str, int] = {}

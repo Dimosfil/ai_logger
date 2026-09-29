@@ -351,6 +351,129 @@ class ClientServerTests(unittest.TestCase):
         self.assertEqual(result["matches"][0]["record"]["message"], "chats_persisted")
         self.assertEqual(result["matches"][0]["reason"], "mock")
 
+    def test_web_search_includes_problem_levels_when_display_filter_is_info(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "logs"
+            project_dir = root / "alpha"
+            project_dir.mkdir(parents=True)
+            (project_dir / "2026-07-07.jsonl").write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "timestamp": "2026-07-07T12:00:00+00:00",
+                                "logger": "alpha.worker",
+                                "level": "ERROR",
+                                "message": "avito_request_failed",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "timestamp": "2026-07-07T12:01:00+00:00",
+                                "logger": "alpha.worker",
+                                "level": "INFO",
+                                "message": "chat_scan_end",
+                            }
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            server = create_server(
+                "127.0.0.1",
+                0,
+                aggregator=LogAggregator(),
+                web_logs=WebLogRepository(root),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = server.server_address
+                body = json.dumps(
+                    {
+                        "query": "errors and crashes",
+                        "project": "alpha",
+                        "levels": ["INFO"],
+                        "provider": "mock",
+                    }
+                ).encode("utf-8")
+                http_request = request.Request(
+                    f"http://{host}:{port}/api/search",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with patch.dict(
+                    "os.environ",
+                    {"AI_LOGGER_LLM_MOCK_RESPONSE": json.dumps({"summary": "Mock analysis."})},
+                    clear=False,
+                ):
+                    with request.urlopen(http_request, timeout=5) as response:
+                        result = json.loads(response.read().decode("utf-8"))
+            finally:
+                server.shutdown()
+                thread.join(timeout=3)
+                server.server_close()
+
+        self.assertEqual(result["matches"][0]["record"]["level"], "ERROR")
+        self.assertEqual(result["matches"][0]["record"]["message"], "avito_request_failed")
+
+    def test_settings_api_persists_collect_levels_and_ingest_respects_them(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "logs"
+            log_path = root / "server.jsonl"
+            server = create_server(
+                "127.0.0.1",
+                0,
+                aggregator=LogAggregator([DiskJsonLinesPlugin(log_path)]),
+                web_logs=WebLogRepository(root),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = server.server_address
+                base_url = f"http://{host}:{port}"
+                settings_body = json.dumps({"collect_levels": {"INFO": False}}).encode("utf-8")
+                settings_request = request.Request(
+                    f"{base_url}/api/settings",
+                    data=settings_body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with request.urlopen(settings_request, timeout=5) as response:
+                    settings = json.loads(response.read().decode("utf-8"))
+
+                ingest_body = json.dumps(
+                    [
+                        {"logger": "alpha.worker", "level": "INFO", "message": "skip.me"},
+                        {"logger": "alpha.worker", "level": "ERROR", "message": "keep.me"},
+                    ]
+                ).encode("utf-8")
+                ingest_request = request.Request(
+                    f"{base_url}/ingest",
+                    data=ingest_body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with request.urlopen(ingest_request, timeout=5) as response:
+                    accepted = json.loads(response.read().decode("utf-8"))
+            finally:
+                server.shutdown()
+                thread.join(timeout=3)
+                server.server_close()
+
+            saved_settings = json.loads(
+                (root / ".ai_logger_settings.json").read_text(encoding="utf-8")
+            )
+            written_lines = log_path.read_text(encoding="utf-8").splitlines()
+            written_records = [json.loads(line) for line in written_lines]
+
+        self.assertFalse(settings["collect_levels"]["INFO"])
+        self.assertFalse(saved_settings["collect_levels"]["INFO"])
+        self.assertEqual(accepted["accepted"], 2)
+        self.assertEqual([record["message"] for record in written_records], ["keep.me"])
+
     def test_client_plugin_sends_records_to_ingest_server(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "server.jsonl"

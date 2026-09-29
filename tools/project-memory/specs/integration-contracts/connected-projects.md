@@ -1,6 +1,6 @@
 # Connected Projects
 
-Last reviewed: 2026-07-07
+Last reviewed: 2026-09-29
 
 This register records external local repositories that are intentionally used as
 architecture or implementation sources for `ai_logger`. Do not treat sibling
@@ -23,3 +23,32 @@ them for the current task.
   databases, generated artifacts, or unrelated sibling repositories.
 - Update command: use that repository's own instructions before any write,
   dependency update, build, test, commit, or push.
+
+## AI Media Client
+
+- Local path: `D:\AI\ai-media-client`
+- Repository: `https://github.com/sidindeep/ai-media-client`
+- Role: planned first Node.js client of the cross-stack HTTP ingest protocol and
+  reference for Docker Compose, private `.env`, and PostgreSQL operations.
+- Current logging sources: `src/generation-log.js` writes a private rotating
+  diagnostic JSONL journal; `src/system-errors.js` stores sanitized system
+  errors in PostgreSQL `media_system_errors`; the account generation journal
+  remains an application-owned PostgreSQL workflow.
+- Planned ai_logger edge: forward selected sanitized system and lifecycle events
+  from an opt-in client adapter to `/ingest`, preserving the existing local
+  journals and keeping media prompts, tokens, cookies, and raw provider payloads
+  out of central logs. This edge is not implemented yet.
+- Deployment evidence: `AGENTS.md`, `compose.yaml`, `Dockerfile`, `.env.example`,
+  `README.md`, `docs/generation-logging.md`, and
+  `docs/database-roles-and-migrations.md`. Runtime Compose reads a private `.env`
+  and uses an external PostgreSQL connection; its `postgres-test` service is
+  limited to the test profile.
+- Ownership: AI Media Client owns generation events and account data; ai_logger
+  owns its ingest protocol and future central storage. Do not share their
+  database schemas or credentials.
+- Privacy boundary: inspect instructions, source, tests, public docs, and
+  example configuration only. Do not read `.env`, runtime logs, databases,
+  generated media, or account data without an explicit task and scope.
+- Change procedure: follow AI Media Client's `AGENTS.md` before writes. Its
+  required post-edit verification is `docker compose up -d --build`, service
+  status, and `http://127.0.0.1:3000/api/health`.

@@ -93,8 +93,10 @@
   generated artifacts, local config, or private data. If implementation is
   requested or clearly implied, adapt the relevant logic into the current
   project's architecture and configuration boundaries, update project memory
-  with source/evidence mapping, and run the smallest documented checks that
-  cover the adopted behavior.
+  with the source/evidence mapping, and run the smallest documented checks that
+  cover the adopted behavior. If the requested source is a URL, prefer official
+  repository/docs pages and avoid crawling unrelated pages or downloading large
+  assets unless the user asks for that scope.
 - Do not read large files in full by default, including large `index.html`,
   bundled JS/CSS, logs, lockfiles, generated files, and build artifacts. Prefer
   targeted searches, heads, tails, or small line ranges, such as

@@ -15,12 +15,6 @@ different layers:
   knowledge: algorithms, business rules, workflows, invariants, architecture
   contracts, and verification guarantees.
 
-`tools/project-memory/` is a narrow exception inside `tools/`: it may contain
-compact implementation-driving specifications, decisions, contracts,
-implementation maps, and evidence references. It must not contain product
-runtime/source packages, product plugin implementations, product tests, full
-product documentation, generated output, artifacts, or raw work results.
-
 Handoff summaries should capture user intent, decisions, code or architecture
 changes, business logic, verification evidence, blockers, and next useful
 context as a thematic handoff, not as a short chronological retelling. Break the
@@ -78,6 +72,11 @@ searchable. Keep user-facing overview, visible feature descriptions, stack
 inventory, and operational commands in `README.md`, `docs/`, and runbooks unless
 local instructions choose a compatibility path and link it clearly.
 
+When creating, renaming, moving, or retiring a specification, update the
+project-memory `README.md` or the project's canonical spec index in the same
+scoped change. Add or remove the focused entry and verify its relative link;
+the index is a map, not a second copy of the contract.
+
 Project memory stores specifications and compact evidence references, not raw
 work products or product source trees. Do not place product runtime/source
 packages, product plugin implementations, product tests, full product
@@ -89,11 +88,6 @@ project source/package tree, tests in the test tree, product documentation in
 project-local artifact/evidence/output/data/build/release location. Keep only
 the minimal manifest, summary, checksum, or path/URL reference needed to explain
 a decision, contract, failure, or verification result.
-
-Do not use `tools/project-memory/` as a fallback destination for product code,
-product plugins, product tests, or full product documentation. Put product code
-under the source/package tree, tests under the test tree, and product docs under
-`README.md`, `docs/`, or runbooks.
 
 ## Connected Projects Register
 
@@ -143,6 +137,14 @@ Each feature specification should include:
 - Mermaid flowcharts or state diagrams when the workflow has branches;
 - verification rules that prove the behavior still works after a rewrite;
 - implementation map to current files, routes, commands, schemas, or services.
+
+Distinguish implemented behavior, planned behavior, and historical behavior
+where a reader could confuse them. A document may cover all three when the
+sections are clearly labeled. For claims about the current implementation,
+record when they were last checked and cite the source files or tests used.
+A date by itself is not evidence, and a plan must not be described as already
+implemented. Refresh the status and evidence when the relevant behavior changes;
+do not update dates mechanically on unrelated edits.
 
 The implementation map is evidence for the current codebase, not the behavioral
 source of truth. If code and specification disagree, inspect the current code and

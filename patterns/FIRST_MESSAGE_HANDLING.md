@@ -36,6 +36,12 @@ If the first user message is the canonical shared-instruction Git repository
 URL, a path to a shared instruction checkout/cache, or a request to connect
 shared instructions, treat it as an instruction bootstrap.
 
+If the source repository exposes a root `BOOTSTRAP.md`, read it before
+classifying or proposing any Git or project operation. Resolve the target URL
+inside a Markdown link before deciding what the request means. Do not require a
+specific local drive, checkout folder, or `GENERAL_INSTRUCTIONS_HOME` value when
+the canonical GitHub source is available.
+
 Also treat `gi init <source>`, `init <source>`, `инит <source>`, and
 `инициализируй <source>` as an instruction bootstrap when the source points to
 the canonical repo `https://github.com/Dimosfil/general-instructions.git`, the
@@ -51,6 +57,10 @@ the existing shared-instruction source," not "create a Git repository."
 In that case:
 
 - Read the shared rules needed for bootstrapping.
+- Prefer the source checkout's `tools/install-instruction-kit.ps1` for
+  deterministic fresh-project setup when it is available. Treat existing local
+  instruction files as project-owned and merge them deliberately instead of
+  overwriting them.
 - Deploy a local instruction kit into the current project from the shared
   templates and checklist.
 - When the target path is the active `general-instructions` repository itself,
@@ -131,8 +141,10 @@ Examples:
 - `gi пул`, `gi pull`, or `ги пул`: fetch and pull the current branch, resolving
   only clear low-risk conflicts and asking the user when judgment is needed.
 
-If a `gi` command is missing a needed parameter, ask one short clarification
-question instead of guessing.
+Resolve needed `gi` parameters from the current request, established session
+choices, and documented project defaults. If a required value remains unknown,
+ask one focused question instead of guessing. Do not ask again for an unchanged
+value already established for the same target and scope.
 
 Keep the response scoped to the `gi` command. After completing it, summarize only
 that command's result and stop. Do not resume an older product task or previous
