@@ -47,7 +47,7 @@ The helper `configured_logger()` can build plugins from environment variables:
 - `AI_LOGGER_JSONL_PATH`: enables `DiskJsonLinesPlugin`;
 - `AI_LOGGER_HTTP_URL`: enables `HttpJsonPlugin`;
 - `AI_LOGGER_SERVER_URL`: enables `ServerHttpPlugin`, usually
-  `http://127.0.0.1:8765/ingest`;
+  `http://127.0.0.1:8766/ingest`;
 - `AI_LOGGER_SERVER_TOKEN`: bearer token for the ingest server;
 - `AI_LOGGER_HTTP_TIMEOUT`: HTTP timeout in seconds.
 
@@ -136,7 +136,7 @@ native adapter that sends the same ingest protocol.
 from ai_logger import Logger, LogAggregator, ServerHttpPlugin
 
 aggregator = LogAggregator([
-    ServerHttpPlugin("http://127.0.0.1:8765/ingest", token="dev-secret")
+    ServerHttpPlugin("http://127.0.0.1:8766/ingest", token="dev-secret")
 ])
 logger = Logger("my-project.worker", aggregator)
 
@@ -146,7 +146,7 @@ logger.info("job.started", job_id="42")
 The same client route can be configured by environment:
 
 ```powershell
-$env:AI_LOGGER_SERVER_URL = "http://127.0.0.1:8765/ingest"
+$env:AI_LOGGER_SERVER_URL = "http://127.0.0.1:8766/ingest"
 $env:AI_LOGGER_SERVER_TOKEN = "dev-secret"
 ```
 
@@ -162,7 +162,7 @@ from ai_logger import AiLoggerClientOptions, AiLoggerHttpHandler
 
 handler = AiLoggerHttpHandler(
     options=AiLoggerClientOptions(
-        server_url="http://127.0.0.1:8765/ingest",
+        server_url="http://127.0.0.1:8766/ingest",
         token="dev-secret",
         project="demo",
         service="worker",
@@ -204,10 +204,10 @@ The server exposes a health endpoint:
 
 ```powershell
 ai-logger-server-check
-Invoke-RestMethod -Uri "http://127.0.0.1:8765/health"
+Invoke-RestMethod -Uri "http://127.0.0.1:8766/health"
 ```
 
-The same server also exposes a local web UI at `http://127.0.0.1:8765/`.
+The same server also exposes a local web UI at `http://127.0.0.1:8766/`.
 The UI shows projects, JSONL log files, level filters, recent records, and a
 natural-language AI search box with an LLM provider selector. It reads logs
 from `AI_LOGGER_WEB_LOGS_ROOT`, or falls back to `AI_LOGGER_QUERY_LOGS_PATH`,
@@ -226,7 +226,7 @@ Useful UI endpoints:
 Server backend environment variables:
 
 - `AI_LOGGER_SERVER_HOST`: default `127.0.0.1`;
-- `AI_LOGGER_SERVER_PORT`: default `8765`;
+- `AI_LOGGER_SERVER_PORT`: default `8766`;
 - `AI_LOGGER_SERVER_TOKEN`: optional bearer token required by `/ingest`;
 - `AI_LOGGER_WEB_LOGS_ROOT`: optional web UI read root for JSON Lines logs;
 - `AI_LOGGER_SERVER_JSONL_PATH`: write accepted logs to JSON Lines;

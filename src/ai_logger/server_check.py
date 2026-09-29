@@ -13,7 +13,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--url",
         default=os.environ.get("AI_LOGGER_SERVER_HEALTH_URL"),
-        help="Health URL, usually http://127.0.0.1:8765/health.",
+        help="Health URL, usually http://127.0.0.1:8766/health.",
     )
     parser.add_argument(
         "--host",
@@ -22,7 +22,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("AI_LOGGER_SERVER_PORT", "8765")),
+        default=int(os.environ.get("AI_LOGGER_SERVER_PORT", "8766")),
     )
     parser.add_argument(
         "--timeout",

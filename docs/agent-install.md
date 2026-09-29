@@ -44,7 +44,7 @@ python -m pip install git+https://github.com/Dimosfil/ai_logger.git
 Configure the target project's environment:
 
 ```powershell
-$env:AI_LOGGER_SERVER_URL = "http://127.0.0.1:8765/ingest"
+$env:AI_LOGGER_SERVER_URL = "http://127.0.0.1:8766/ingest"
 $env:AI_LOGGER_PROJECT = "target-project"
 $env:AI_LOGGER_SERVICE = "worker"
 $env:AI_LOGGER_ENVIRONMENT = "dev"
@@ -72,7 +72,7 @@ from ai_logger import AiLoggerClientOptions, AiLoggerHttpHandler
 
 handler = AiLoggerHttpHandler(
     options=AiLoggerClientOptions(
-        server_url="http://127.0.0.1:8765/ingest",
+        server_url="http://127.0.0.1:8766/ingest",
         token=None,
         project="target-project",
         service="worker",
@@ -93,7 +93,7 @@ ai-logger-client-check
 Expected success output:
 
 ```text
-ai_logger client check delivered to http://127.0.0.1:8765/ingest
+ai_logger client check delivered to http://127.0.0.1:8766/ingest
 ```
 
 ## Adapter Selection Rules

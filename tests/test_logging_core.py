@@ -145,7 +145,7 @@ class LoggingCoreTests(unittest.TestCase):
         logger = configured_logger(
             "unit",
             environ={
-                "AI_LOGGER_SERVER_URL": "http://localhost:8765/ingest",
+                "AI_LOGGER_SERVER_URL": "http://localhost:8766/ingest",
                 "AI_LOGGER_SERVER_TOKEN": "token",
             },
         )

@@ -46,7 +46,6 @@
       "guide": "clients/node/README.md",
       "required_env": [
         "AI_LOGGER_SERVER_URL",
-        "AI_LOGGER_API_KEY",
         "AI_LOGGER_PROJECT"
       ]
     },

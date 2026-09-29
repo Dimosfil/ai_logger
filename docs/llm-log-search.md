@@ -44,7 +44,7 @@ JSON output is useful for tools:
 ai-logger-log-search "worker timeout" --format json
 ```
 
-The local web UI at `http://127.0.0.1:8765/` uses the same provider registry in
+The local web UI at `http://127.0.0.1:8766/` uses the same provider registry in
 its natural-language search box. Leave the provider selector on `Auto provider`
 to use `AI_LOGGER_LLM_PROVIDER` / `LLM_PROVIDER`, or choose a provider for that
 single request.

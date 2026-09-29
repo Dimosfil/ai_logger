@@ -17,16 +17,15 @@ function cleanText(value, maxLength = 1000) {
 
 /** Send only selected diagnostic fields. Callers keep prompts and provider payloads local. */
 export class AiLoggerClient {
-  constructor({ serverUrl, apiKey, project, service = 'app', environment = 'production',
+  constructor({ serverUrl, project, service = 'app', environment = 'production',
     fallbackJsonlPath = null, timeoutMs = 5000, fetchImpl = fetch } = {}) {
-    if (!serverUrl || !apiKey || !project) throw new Error('serverUrl, apiKey and project are required');
+    if (!serverUrl || !project) throw new Error('serverUrl and project are required');
     const target = new URL(serverUrl);
     if (target.protocol !== 'https:' && !(target.protocol === 'http:' &&
         ['localhost', '127.0.0.1', '[::1]'].includes(target.hostname))) {
       throw new Error('HTTPS is required for remote ai_logger endpoints');
     }
     this.serverUrl = serverUrl;
-    this.apiKey = apiKey;
     this.project = project;
     this.service = service;
     this.environment = environment;
@@ -38,7 +37,6 @@ export class AiLoggerClient {
   static fromEnv(env = process.env) {
     return new AiLoggerClient({
       serverUrl: env.AI_LOGGER_SERVER_URL,
-      apiKey: env.AI_LOGGER_API_KEY,
       project: env.AI_LOGGER_PROJECT,
       service: env.AI_LOGGER_SERVICE || 'app',
       environment: env.AI_LOGGER_ENVIRONMENT || 'production',
@@ -64,7 +62,7 @@ export class AiLoggerClient {
     try {
       const response = await this.fetchImpl(this.serverUrl, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json; charset=utf-8' },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify(record),
         signal: AbortSignal.timeout(this.timeoutMs),
       });

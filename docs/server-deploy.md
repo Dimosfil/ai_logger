@@ -1,6 +1,6 @@
 # Server Deploy Guide
 
-For the PostgreSQL-backed Docker service with scoped client and agent API keys,
+For the PostgreSQL-backed Docker service with open ingest and log viewing,
 see [Hosted PostgreSQL logger](hosted-postgres.md).
 
 This guide is the contract for agents that deploy the `ai_logger` server on a
@@ -123,7 +123,7 @@ Create, start, or choose a Graylog GELF HTTP input, then configure the server:
 
 ```powershell
 $env:AI_LOGGER_SERVER_HOST = "127.0.0.1"
-$env:AI_LOGGER_SERVER_PORT = "8765"
+$env:AI_LOGGER_SERVER_PORT = "8766"
 $env:AI_LOGGER_SERVER_TOKEN = "dev-secret"
 $env:AI_LOGGER_GRAYLOG_GELF_URL = "http://graylog.example:12201/gelf"
 $env:AI_LOGGER_GRAYLOG_HOST = "ai-logger-local"
@@ -157,7 +157,7 @@ For multiple projects, prefer per-project daily files:
 
 ```powershell
 $env:AI_LOGGER_SERVER_HOST = "127.0.0.1"
-$env:AI_LOGGER_SERVER_PORT = "8765"
+$env:AI_LOGGER_SERVER_PORT = "8766"
 $env:AI_LOGGER_SERVER_TOKEN = "dev-secret"
 $env:AI_LOGGER_SERVER_PROJECT_DAILY_DIR = "logs/projects"
 ```
@@ -172,7 +172,7 @@ The legacy single-file backend is still available:
 
 ```powershell
 $env:AI_LOGGER_SERVER_HOST = "127.0.0.1"
-$env:AI_LOGGER_SERVER_PORT = "8765"
+$env:AI_LOGGER_SERVER_PORT = "8766"
 $env:AI_LOGGER_SERVER_TOKEN = "dev-secret"
 $env:AI_LOGGER_SERVER_JSONL_PATH = "logs/server.jsonl"
 ```
@@ -207,7 +207,7 @@ ai-logger-server-check
 Equivalent HTTP check:
 
 ```powershell
-Invoke-RestMethod -Uri "http://127.0.0.1:8765/health"
+Invoke-RestMethod -Uri "http://127.0.0.1:8766/health"
 ```
 
 Expected response:
@@ -223,7 +223,7 @@ Expected response:
 ## Ingest Check
 
 ```powershell
-$env:AI_LOGGER_SERVER_URL = "http://127.0.0.1:8765/ingest"
+$env:AI_LOGGER_SERVER_URL = "http://127.0.0.1:8766/ingest"
 $env:AI_LOGGER_PROJECT = "server-deploy-check"
 $env:AI_LOGGER_SERVICE = "agent"
 $env:AI_LOGGER_SERVER_TOKEN = "dev-secret"

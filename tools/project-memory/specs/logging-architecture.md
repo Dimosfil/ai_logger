@@ -42,36 +42,32 @@ flowchart LR
 
 ## Hosted PostgreSQL workflow (current)
 
-When `DATABASE_URL` is set, startup creates the prefixed
-`ai_logger_records` and `ai_logger_api_keys` tables. The database URL and
-bootstrap administrator token are private environment values. Hosted mode
-requires `AI_LOGGER_ADMIN_TOKEN`; startup fails without it. The records table
-stores normalized protocol JSON plus project, record ID, level, logger, and
+When `DATABASE_URL` is set, startup creates the `ai_logger_records` table.
+The database URL is a private environment value. The records table stores
+normalized protocol JSON plus project, record ID, level, logger, and
 timestamps. `(project, record_id)` is unique for retry deduplication.
-The Docker image sets `AI_LOGGER_REQUIRE_POSTGRES=1` and requires both the
-database URL and an administrator token of at least 32 characters before any
-connection is attempted. This prevents a public hosted instance from starting
-in the legacy unauthenticated mode when environment variables are missing.
-Database connections require TLS. The supplied endpoint on port 16173 did
-not support SSL when checked on 2026-09-29, so live startup is blocked until
-the user provides a TLS-capable endpoint or secure tunnel. The tables already
-exist; the local Docker service is stopped.
+The Docker image sets `AI_LOGGER_REQUIRE_POSTGRES=1` and requires the database
+URL before starting. An existing `ai_logger_api_keys` table is not dropped but
+is no longer created or used.
+Database TLS follows the same configuration as `ai-media-client`: plain TCP by
+default, `DATABASE_SSL=1` to require TLS. The supplied endpoint lacks TLS, so
+the user-approved URL works without an extra variable. In the default mode,
+database credentials and log records are unencrypted on the database link.
 
-An administrator authenticates with the bootstrap token, creates or revokes
-keys at `/api/admin/keys`, and sees each newly generated key exactly once.
-Only a SHA-256 digest is stored. A key has `ingest`, `read`, or both scopes and
-can be bound to a project. Project binding is checked against
-`context.project` on ingest and against the requested project on read. An
-`ingest` key cannot read records; a `read` key cannot ingest. The existing
-JSONL browser and settings/search APIs require the administrator token in
-hosted mode. `/health` is public and reports storage unavailable with HTTP 503
-when PostgreSQL cannot be reached.
+The hosted service currently has no HTTP authentication. `/ingest`,
+`/api/agent/logs`, `/`, `/admin`, and the existing JSONL browser/settings/search
+routes are open. `/` and `/admin` display PostgreSQL records; `/journal`
+displays the local JSONL copy when configured. No key issue or revoke routes
+are exposed.
+`/health` reports storage unavailable with HTTP 503 when PostgreSQL cannot be
+reached. The public access policy is deliberate for the initial deployment;
+records must be sanitized before sending.
 For hosted routing, a platform `PORT` takes precedence over
 `AI_LOGGER_SERVER_PORT`; when `PORT` is present and no explicit host is set,
-the process binds to `0.0.0.0`. Local default remains `127.0.0.1:8765`.
+the process binds to `0.0.0.0`. Local default remains `127.0.0.1:8766`.
 
-On `POST /ingest`, validate authorization, batch size, protocol records, and
-project binding before writing. Store all selected records in one PostgreSQL
+On `POST /ingest`, validate batch size, protocol records, and required
+`context.project` before writing. Store all selected records in one PostgreSQL
 transaction, then emit to optional JSONL/other plugins and return 202. A
 storage failure returns 503 so the client can retry; plugin copies are
 best-effort after the authoritative database write. The agent reads bounded,
@@ -79,8 +75,8 @@ newest-first records from `/api/agent/logs` with project, level, and time
 filters. The portable Node.js client in `clients/node/` permits only named
 diagnostic context fields and returns a failure result or writes a local
 fallback when the server is unreachable.
-The Node.js client rejects remote HTTP URLs so its API key travels only over
-HTTPS; loopback HTTP is allowed for local development.
+The Node.js client uses no API key and rejects remote HTTP URLs; loopback HTTP
+is allowed for local development.
 
 The `ai-media-client` integration is prepared but not installed in that
 repository. Its historical `media_system_errors` and generation/account

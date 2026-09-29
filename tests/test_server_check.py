@@ -59,14 +59,14 @@ class ServerCheckTests(unittest.TestCase):
         output = StringIO()
 
         def fake_urlopen(request, timeout):
-            self.assertEqual(request.full_url, "http://127.0.0.1:8765/health")
+            self.assertEqual(request.full_url, "http://127.0.0.1:8766/health")
             return _FakeResponse({"status": "ok", "plugins": 1})
 
         with patch("ai_logger.server_check.request.urlopen", fake_urlopen), patch(
             "sys.stdout",
             output,
         ):
-            code = main(["--host", "0.0.0.0", "--port", "8765"])
+            code = main(["--host", "0.0.0.0", "--port", "8766"])
 
         self.assertEqual(code, 0)
 

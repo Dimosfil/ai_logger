@@ -56,7 +56,7 @@ from ai_logger import AiLoggerClientOptions, AiLoggerHttpHandler
 
 handler = AiLoggerHttpHandler(
     options=AiLoggerClientOptions(
-        server_url="http://127.0.0.1:8765/ingest",
+        server_url="http://127.0.0.1:8766/ingest",
         token="dev-secret",
         project="billing",
         service="worker",
@@ -112,7 +112,7 @@ ASP.NET Core should use the same model through a native logging provider:
 ```csharp
 builder.Logging.AddAiLogger(options =>
 {
-    options.ServerUrl = "http://127.0.0.1:8765/ingest";
+    options.ServerUrl = "http://127.0.0.1:8766/ingest";
     options.Token = "dev-secret";
     options.Project = "billing";
     options.Service = "api";

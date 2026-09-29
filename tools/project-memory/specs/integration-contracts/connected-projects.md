@@ -35,7 +35,7 @@ them for the current task.
   errors in PostgreSQL `media_system_errors`; the account generation journal
   remains an application-owned PostgreSQL workflow.
 - Prepared ai_logger edge: `clients/node/ai-logger-client.mjs` forwards selected sanitized
-  system and lifecycle events to `/ingest` with a project-bound ingest key.
+  system and lifecycle events to `/ingest` without an API key.
   The module remains in `ai_logger` for later transfer; no files in
   `ai-media-client` were changed. Existing local journals remain in place.
   Media prompts, tokens, cookies, and raw provider payloads stay out of
@@ -66,7 +66,9 @@ them for the current task.
   the server must bind to `0.0.0.0` and expose `/health`. A 502 on `/health`
   means the gateway did not reach a healthy HTTP process. See
   `docs/hosted-postgres.md` and the platform's web-app/domain documentation.
-- Current evidence (2026-09-29): public `/` and `/health` returned 502. The
-  exact remote runtime failure remains unverified without dashboard logs.
+- Runtime logs later showed missing/short admin token, then a database TLS
+  mismatch. The current code removes admin/key authentication and follows
+  `ai-media-client` database configuration: TLS is off unless `DATABASE_SSL=1`.
+  Publication and remote health remain unverified until deployment.
 - Privacy boundary: do not store dashboard credentials, database URLs, or
   runtime logs in this register.

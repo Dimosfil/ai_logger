@@ -1,69 +1,48 @@
 # Hosted PostgreSQL logger
 
-This deployment adds durable PostgreSQL records and scoped API keys to the
-existing `/ingest` server. PostgreSQL is the authoritative ingest store when
-`DATABASE_URL` is set. JSONL remains a local browsing/fallback copy. The
-database URL is for **ai_logger**; client projects keep separate credentials.
+The service accepts diagnostic records over HTTP, stores them in PostgreSQL,
+and displays them at `/` and `/admin`. This initial deployment has no application
+passwords or API keys. The `/ingest`, `/api/agent/logs`, `/admin`, and
+existing web settings/search routes are open to anyone who can reach the
+service. Add access control before sending sensitive logs.
 
 ## Configure
 
-Copy `.env.example` to ignored `.env` and set:
+Set `DATABASE_URL` in the hosting platform's private environment. The Docker
+image sets `AI_LOGGER_REQUIRE_POSTGRES=1` and fails to start without the URL.
+The database account needs permission to create the `ai_logger_records` table
+on first startup and to insert/select records afterward. No admin token,
+client API key, or extra database is needed. A former
+`ai_logger_api_keys` table, if present, is left untouched but is no longer
+used.
 
-- `DATABASE_URL`: PostgreSQL connection string for the logger database;
-- `AI_LOGGER_ADMIN_TOKEN`: long random secret used only by the administrator;
-- `AI_LOGGER_SERVER_PROJECT_DAILY_DIR=/app/logs`: JSONL copy for the existing web viewer.
+Database TLS works like in `ai-media-client`: it is off by default and enabled
+with `DATABASE_SSL=1`. The supplied endpoint does not support TLS, so its
+`DATABASE_URL` needs no additional option. With the default setting, the
+database password and log data travel unencrypted. Keep the URL out of Git and
+support logs.
 
-The Docker image sets `AI_LOGGER_REQUIRE_POSTGRES=1`. It refuses to start
-without `DATABASE_URL` and an administrator token of at least 32 characters;
-hosted deployments cannot silently fall back to unauthenticated JSONL mode.
+The application uses the platform's `PORT` when provided and binds to
+`0.0.0.0`; the internal port configured in Bothost must match. For local
+Compose, copy `.env.example` to ignored `.env`, set `DATABASE_URL`, and run
+`docker compose up -d --build`. Compose uses `AI_LOGGER_SERVER_PORT` for both
+the container and the loopback host port; there is no separate publish port.
 
-PostgreSQL TLS is required by the server (`sslmode=require`). The currently
-supplied database endpoint on port 16173 answered without SSL in the
-2026-09-29 connectivity check, so the container must remain stopped until a
-TLS-enabled endpoint or secure tunnel is configured. Its tables were created
-before that limitation was discovered; no live logger should use plain TCP.
+## Use
 
-Start with `docker compose up -d --build`. On startup, the server creates
-`ai_logger_records` and `ai_logger_api_keys` if absent. The connection account
-needs DDL permission on first startup and DML permission afterward. Check
-`http://127.0.0.1:8765/health` (or `AI_LOGGER_PUBLISH_PORT` if changed).
-Compose binds only to loopback. For remote
-clients, place an HTTPS reverse proxy in front and route `/ingest` and read
-endpoints to this service. Set the client's `AI_LOGGER_SERVER_URL` to that
-public HTTPS `/ingest` address.
-`/health` returns 503 if PostgreSQL cannot be reached.
+- `GET /health` checks the database and returns 200 when ready.
+- `POST /ingest` accepts one record or up to 100 records, with a 1 MiB body
+  limit. Each record needs `context.project`. It returns 202 after storing
+  selected records; a database failure returns 503.
+- `GET /api/agent/logs?project=ai-media-client&levels=ERROR,WARNING&limit=100`
+  returns recent records. `since=<ISO-8601>` is also supported. Maximum limit
+  is 500.
+- `GET /` and `GET /admin` show PostgreSQL records with project, level, and
+  count filters. The existing JSONL journal is available at `/journal` when
+  configured.
 
-On Bothost, the server uses the platform-provided `PORT` before
-`AI_LOGGER_SERVER_PORT` and binds to `0.0.0.0` by default when `PORT` is set.
-The internal port selected in the Bothost panel must match `PORT`. Check the
-runtime logs if the domain returns 502; a successful image build does not
-confirm the server process started.
-
-## Key management
-
-Open `/admin`, enter `AI_LOGGER_ADMIN_TOKEN`, and issue a key. A client key
-needs `ingest`; an agent key needs `read`. One key may have both scopes, though
-separate keys make independent revocation possible. Bind keys to a project
-(for example `ai-media-client`) to prevent cross-project send or read access.
-The full key appears only at creation. The database stores a SHA-256 digest,
-prefix, scope, project, and revocation time. Revoke compromised or retired keys
-in `/admin`. Keep the bootstrap admin token and issued keys outside Git.
-
-## API
-
-All calls use `Authorization: Bearer <key>`. `POST /ingest` accepts the existing
-protocol (one record or up to 100 records, 1 MiB maximum); each record needs
-`context.project`. The server writes selected records to PostgreSQL before
-returning 202. A PostgreSQL failure returns 503, so clients can retry or use
-their local fallback. Duplicate `(project, id)` records are ignored.
-
-`GET /api/agent/logs?project=ai-media-client&levels=ERROR,WARNING&limit=100`
-returns `{"records":[...]}` newest first. `since=<ISO-8601>` limits the
-earliest timestamp. A project-bound read key cannot request another project.
-The administrator can use the existing web viewer at `/`; it prompts for the
-bootstrap token when it loads data. Collection settings and web search are
-administrator-only. `/health` remains public for health checks.
-
-The existing `ai-media-client` system-error rows are not copied automatically.
-Only sanitized new events should enter `/ingest`; account journals, prompts,
-cookies, tokens, and raw provider responses stay in the owning application.
+The Node client in `clients/node/` needs only
+`AI_LOGGER_SERVER_URL=https://<host>/ingest` and
+`AI_LOGGER_PROJECT=ai-media-client`. It sends only selected diagnostic
+fields and requires HTTPS for remote delivery. No files in
+`ai-media-client` are changed by this repository.

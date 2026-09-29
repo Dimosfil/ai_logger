@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import hmac
 from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -22,10 +21,10 @@ class LogIngestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path, query = self._path_and_query()
-        if path.rstrip("/") == "/admin" and self.server.store:
+        if path.rstrip("/") in ("", "/admin") and self.server.store:
             self._send_html(HTTPStatus.OK, render_admin_html())
             return
-        if path.rstrip("/") == "":
+        if path.rstrip("/") in ("", "/journal"):
             self._send_html(HTTPStatus.OK, render_index_html())
             return
         if path.rstrip("/") == "/health":
@@ -85,14 +84,6 @@ class LogIngestHandler(BaseHTTPRequestHandler):
                 return
             self._send_json(HTTPStatus.OK, {"records": records})
             return
-        if path.rstrip("/") == "/api/admin/keys" and self.server.store:
-            if self._require_scope("admin") is False:
-                return
-            try:
-                self._send_json(HTTPStatus.OK, {"keys": self.server.store.list_keys()})
-            except Exception:
-                self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "storage_unavailable"})
-            return
         self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
     def do_POST(self) -> None:
@@ -106,25 +97,6 @@ class LogIngestHandler(BaseHTTPRequestHandler):
             if self._require_scope("admin") is False:
                 return
             self._handle_settings()
-            return
-        if path.rstrip("/") == "/api/admin/keys" and self.server.store:
-            if self._require_scope("admin") is False:
-                return
-            try:
-                payload = self._read_payload()
-                if not isinstance(payload, dict) or not isinstance(payload.get("scopes"), list):
-                    raise ValueError("Invalid key request")
-                result = self.server.store.create_key(
-                    str(payload.get("name") or ""), payload["scopes"],
-                    payload.get("project"),
-                )
-            except ValueError as exc:
-                self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
-                return
-            except Exception:
-                self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "storage_unavailable"})
-                return
-            self._send_json(HTTPStatus.CREATED, result)
             return
         if path.rstrip("/") != "/ingest":
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
@@ -166,25 +138,6 @@ class LogIngestHandler(BaseHTTPRequestHandler):
             self.server.aggregator.emit(record)
         self._send_json(HTTPStatus.ACCEPTED, {"accepted": len(parsed), "stored": len(selected)})
 
-    def do_DELETE(self) -> None:
-        path, _ = self._path_and_query()
-        if not self.server.store or not path.startswith("/api/admin/keys/"):
-            self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
-            return
-        if self._require_scope("admin") is False:
-            return
-        try:
-            key_id = int(path.rsplit("/", 1)[-1])
-            revoked = self.server.store.revoke_key(key_id)
-        except ValueError:
-            self._send_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_key_id"})
-            return
-        except Exception:
-            self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "storage_unavailable"})
-            return
-        self._send_json(HTTPStatus.OK if revoked else HTTPStatus.NOT_FOUND,
-                        {"revoked": revoked})
-
     def log_message(self, _format: str, *_args: Any) -> None:
         if self.server.access_log:
             super().log_message(_format, *_args)
@@ -196,25 +149,10 @@ class LogIngestHandler(BaseHTTPRequestHandler):
         return self.headers.get("Authorization") == f"Bearer {token}"
 
     def _require_scope(self, scope: str) -> str | bool:
-        if not self.server.store:
-            if scope == "ingest" and self._authorized():
-                return ""
-            if scope == "admin":
-                return ""
-            self._send_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"})
-            return False
-        header = self.headers.get("Authorization", "")
-        key = header[7:] if header.startswith("Bearer ") else ""
-        if self.server.admin_token and key and hmac.compare_digest(key, self.server.admin_token):
+        if self.server.store or scope == "admin":
             return ""
-        if scope != "admin":
-            try:
-                result = self.server.store.authorize(key, scope)
-            except Exception:
-                self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "storage_unavailable"})
-                return False
-            if result is not False:
-                return result
+        if scope == "ingest" and self._authorized():
+            return ""
         self._send_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"})
         return False
 
@@ -303,17 +241,13 @@ class LogIngestHttpServer(ThreadingHTTPServer):
         access_log: bool = False,
         web_logs: WebLogRepository | None = None,
         store: PostgresStore | None = None,
-        admin_token: str | None = None,
     ) -> None:
-        if store and not admin_token:
-            raise ValueError("AI_LOGGER_ADMIN_TOKEN is required with PostgreSQL")
         super().__init__(server_address, LogIngestHandler)
         self.aggregator = aggregator
         self.token = token
         self.access_log = access_log
         self.web_logs = web_logs or WebLogRepository.from_env()
         self.store = store
-        self.admin_token = admin_token
 
     @property
     def plugin_count(self) -> int:
@@ -329,14 +263,13 @@ class LogIngestHttpServer(ThreadingHTTPServer):
 
 def create_server(
     host: str = "127.0.0.1",
-    port: int = 8765,
+    port: int = 8766,
     *,
     aggregator: LogAggregator | None = None,
     token: str | None = None,
     access_log: bool = False,
     web_logs: WebLogRepository | None = None,
     store: PostgresStore | None = None,
-    admin_token: str | None = None,
 ) -> LogIngestHttpServer:
     return LogIngestHttpServer(
         (host, port),
@@ -345,19 +278,17 @@ def create_server(
         access_log=access_log,
         web_logs=web_logs,
         store=store,
-        admin_token=admin_token,
     )
 
 
 def main() -> int:
     host, port = _bind_address_from_env(os.environ)
     token = os.environ.get("AI_LOGGER_SERVER_TOKEN")
-    database_url, admin_token = _database_settings_from_env(os.environ)
-    store = PostgresStore(database_url) if database_url else None
+    database_url = _database_settings_from_env(os.environ)
+    store = PostgresStore(database_url, ssl=os.environ.get("DATABASE_SSL") == "1") if database_url else None
     if store:
         store.ensure_schema()
-    server = create_server(host, port, token=token, store=store,
-                           admin_token=admin_token)
+    server = create_server(host, port, token=token, store=store)
     print(f"ai_logger server listening on http://{host}:{port}/")
     try:
         server.serve_forever()
@@ -374,23 +305,17 @@ def _bind_address_from_env(environ: Mapping[str, str]) -> tuple[str, int]:
     host = environ.get("AI_LOGGER_SERVER_HOST") or (
         "0.0.0.0" if platform_port else "127.0.0.1"
     )
-    port = int(platform_port or environ.get("AI_LOGGER_SERVER_PORT") or "8765")
+    port = int(platform_port or environ.get("AI_LOGGER_SERVER_PORT") or "8766")
     if not 1 <= port <= 65535:
         raise ValueError("Server port must be between 1 and 65535")
     return host, port
 
 
-def _database_settings_from_env(environ: Mapping[str, str]) -> tuple[str | None, str | None]:
+def _database_settings_from_env(environ: Mapping[str, str]) -> str | None:
     database_url = environ.get("DATABASE_URL") or None
-    admin_token = environ.get("AI_LOGGER_ADMIN_TOKEN") or None
-    if environ.get("AI_LOGGER_REQUIRE_POSTGRES") == "1":
-        if not database_url:
-            raise RuntimeError("DATABASE_URL is required for hosted server")
-        if not admin_token or len(admin_token) < 32:
-            raise RuntimeError("AI_LOGGER_ADMIN_TOKEN must be at least 32 characters")
-    elif database_url and not admin_token:
-        raise RuntimeError("AI_LOGGER_ADMIN_TOKEN is required with PostgreSQL")
-    return database_url, admin_token
+    if environ.get("AI_LOGGER_REQUIRE_POSTGRES") == "1" and not database_url:
+        raise RuntimeError("DATABASE_URL is required for hosted server")
+    return database_url
 
 
 def _first(query: dict[str, list[str]], key: str) -> str | None:

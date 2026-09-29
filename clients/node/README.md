@@ -15,9 +15,8 @@ await logger.send({
 });
 ```
 
-Set `AI_LOGGER_SERVER_URL` to the public HTTPS `/ingest` URL,
-`AI_LOGGER_API_KEY` to an `ingest` key from `/admin`, and
-`AI_LOGGER_PROJECT=ai-media-client`. Optional values are
+Set `AI_LOGGER_SERVER_URL` to the public HTTPS `/ingest` URL and
+`AI_LOGGER_PROJECT=ai-media-client`. No API key is needed. Optional values are
 `AI_LOGGER_SERVICE`, `AI_LOGGER_ENVIRONMENT`, and
 `AI_LOGGER_FALLBACK_JSONL_PATH`. The client forwards only selected diagnostic
 context fields; application code must pass sanitized event names and must not
