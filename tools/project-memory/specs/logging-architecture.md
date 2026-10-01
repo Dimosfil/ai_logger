@@ -66,6 +66,14 @@ The hosted service currently has no HTTP authentication. `/ingest`,
 routes are open. `/` and `/admin` display PostgreSQL records; `/journal`
 displays the local JSONL copy when configured. No key issue or revoke routes
 are exposed.
+The PostgreSQL admin level filter uses native checkboxes for DEBUG, INFO,
+WARNING, ERROR and CRITICAL. Selected levels are joined with commas in the
+existing `levels` query parameter (OR matching). Changes reload the table;
+“Все” clears the selection and no selection omits `levels`, showing all levels.
+Project and count filters compose with this selection. Implementation:
+`src/ai_logger/admin.py`; contract coverage: `tests/test_hosted_server.py`
+(checked 2026-10-01).
+
 The PostgreSQL table UI formats timestamps as `DD.MM.YYYY HH:mm:ss` in the
 browser's local timezone, with seconds but no fractional seconds or offset.
 The original timestamp is preserved in the time cell's hover title; missing

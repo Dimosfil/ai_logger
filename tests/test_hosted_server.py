@@ -107,6 +107,20 @@ class HostedServerTests(unittest.TestCase):
                 self.assertIn("/api/agent/logs", html)
                 self.assertNotIn("adminToken", html)
 
+    def test_read_filters_multiple_levels_with_project_and_limit(self):
+        for project, level in (("media", "INFO"), ("media", "ERROR"),
+                               ("other", "ERROR"), ("media", "WARNING")):
+            self.assertEqual(self.call("/ingest", method="POST", body={
+                "logger": "worker", "level": level, "message": level,
+                "context": {"project": project},
+            })[0], 202)
+        status, result = self.call("/api/agent/logs?project=media&levels=ERROR,WARNING&limit=100")
+        self.assertEqual(status, 200)
+        self.assertEqual([record["level"] for record in result["records"]], ["ERROR", "WARNING"])
+        self.assertTrue(all(record["context"]["project"] == "media" for record in result["records"]))
+        self.assertEqual(len(self.call("/api/agent/logs?project=media&levels=ERROR,WARNING&limit=1")[1]["records"]), 1)
+        self.assertEqual(len(self.call("/api/agent/logs?project=media")[1]["records"]), 3)
+
     def test_read_api_preserves_machine_identity_and_role(self):
         for machine in ("my-pc", "friend-pc"):
             self.assertEqual(self.call("/ingest", method="POST", body={

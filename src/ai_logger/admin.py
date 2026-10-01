@@ -9,6 +9,8 @@ def render_admin_html() -> str:
 body{font:16px system-ui;background:#111827;color:#f9fafb;max-width:1200px;margin:32px auto;padding:0 20px}
 input,select,button{font:inherit;padding:9px;margin:4px;background:#1f2937;color:inherit;border:1px solid #4b5563;border-radius:5px}
 button{cursor:pointer}button:hover{background:#374151}label{display:inline-block;margin:8px}
+.level-filter{display:inline-block;vertical-align:middle;border:1px solid #4b5563;border-radius:5px;margin:8px;padding:4px 8px}
+.level-filter label{margin:4px;white-space:nowrap}.level-filter input{accent-color:#2563eb;padding:0}
 table{border-collapse:collapse;width:100%;margin-top:20px}td,th{padding:10px;border-bottom:1px solid #374151;text-align:left;vertical-align:top}
 td.message{min-width:240px;white-space:pre-wrap;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere}
 td.time{white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -20,8 +22,14 @@ details{margin-top:8px}summary{cursor:pointer}pre.stack{font-size:12px;padding:8
 <h1>Логи ai_logger</h1>
 <p><a href="/journal">Локальный журнал</a> · <a href="/health">Состояние сервиса</a></p>
 <label>Проект <input id="project" placeholder="Все проекты"></label>
-<label>Уровень <select id="level"><option value="">Все</option><option>DEBUG</option><option>INFO</option>
-<option>WARNING</option><option>ERROR</option><option>CRITICAL</option></select></label>
+<fieldset id="levels" class="level-filter"><legend>Уровни</legend>
+<label><input id="all-levels" type="checkbox" checked>Все</label>
+<label><input type="checkbox" name="level" value="DEBUG">DEBUG</label>
+<label><input type="checkbox" name="level" value="INFO">INFO</label>
+<label><input type="checkbox" name="level" value="WARNING">WARNING</label>
+<label><input type="checkbox" name="level" value="ERROR">ERROR</label>
+<label><input type="checkbox" name="level" value="CRITICAL">CRITICAL</label>
+</fieldset>
 <label>Количество <select id="limit"><option>100</option><option>250</option><option>500</option></select></label>
 <button id="load">Обновить</button><p id="status" role="status"></p>
 <table><thead><tr><th>Время</th><th>Проект</th><th>Машина</th><th>Уровень</th><th>Источник</th><th>Сообщение</th></tr></thead>
@@ -91,7 +99,8 @@ async function load(){
   el('status').textContent='Загрузка...';
   const query=new URLSearchParams({limit:el('limit').value});
   if(el('project').value.trim()) query.set('project',el('project').value.trim());
-  if(el('level').value) query.set('levels',el('level').value);
+  const levels=Array.from(document.querySelectorAll('input[name="level"]:checked'),input=>input.value);
+  if(levels.length) query.set('levels',levels.join(','));
   try{
     const response=await fetch('/api/agent/logs?'+query);
     const payload=await response.json();
@@ -114,5 +123,11 @@ async function load(){
   }catch(error){el('status').textContent='Ошибка: '+error.message}
 }
 el('load').onclick=load;
+el('levels').onchange=event=>{
+  const inputs=Array.from(document.querySelectorAll('input[name="level"]'));
+  if(event.target.id==='all-levels') inputs.forEach(input=>{input.checked=false;});
+  el('all-levels').checked=!inputs.some(input=>input.checked);
+  load();
+};
 load();
 </script></html>"""

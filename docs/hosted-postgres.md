@@ -41,6 +41,11 @@ the container and the loopback host port; there is no separate publish port.
   count filters. The existing JSONL journal is available at `/journal` when
   configured.
 
+The level filter uses checkboxes: select several levels to show records matching
+any of them. Changing the selection refreshes the table. “Все” clears the level
+selection; with no individual levels selected, all levels are shown. Project
+and count filters still apply.
+
 The time column shows `DD.MM.YYYY HH:mm:ss` in the browser's local timezone,
 without fractional seconds or a timezone suffix. Hover over a time to see the
 original timestamp with its full precision and timezone.
