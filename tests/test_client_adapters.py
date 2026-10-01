@@ -37,6 +37,27 @@ class _FakeResponse:
 
 
 class ClientAdapterTests(unittest.TestCase):
+    def test_configured_machine_identity_persists_across_clients(self) -> None:
+        from ai_logger.config import build_client_from_env
+
+        env = {
+            "AI_LOGGER_SERVER_URL": "http://localhost/ingest",
+            "AI_LOGGER_PROJECT": "demo",
+            "AI_LOGGER_SERVICE": "executor",
+            "AI_LOGGER_ENVIRONMENT": "local",
+            "AI_LOGGER_INSTANCE_ID": " my-pc ",
+        }
+        for _ in range(2):
+            client = build_client_from_env(env)
+            with patch.object(client, "_post") as post:
+                self.assertTrue(client.send({
+                    "message": "machine.check", "context": {"instance_id": "container-id"},
+                }))
+                context = post.call_args.args[0]["context"]
+                self.assertEqual(context["instance_id"], "my-pc")
+                self.assertEqual(context["service"], "executor")
+                self.assertEqual(context["environment"], "local")
+
     def test_client_posts_normalized_record_with_default_context_and_redaction(self) -> None:
         requests = []
 

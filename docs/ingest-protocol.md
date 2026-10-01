@@ -57,6 +57,10 @@ Recommended context fields:
 - `service`
 - `environment`
 - `host`
+- `instance_id`: optional permanent source-machine ID, independent of process
+  role (`service`), retained across container recreation
+- `description`, `file`, `line`, `function`, `entity`: selected error
+  explanation, source location and affected entity; omit unavailable values
 - `trace_id`
 - `span_id`
 - `request_id`

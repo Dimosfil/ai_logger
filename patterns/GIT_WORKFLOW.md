@@ -18,6 +18,12 @@ language preferences.
 - `gi коммит пуш` means the same as `gi пуш`.
 - `gi только пуш` means push existing local commits only; do not create a new
   commit for this command.
+- A project-local statement that the user normally creates commits is a default,
+  not a veto of these explicit commands. If a project instead unconditionally
+  forbids agent-created commits, follow that specific rule and report that
+  `gi пуш` cannot complete until the project rule changes. Do not advise a
+  manual commit followed by `gi пуш`: that command does not fall back to
+  push-only behavior.
 - Do not reinterpret `gi пуш` as a raw `git push`, a retry of a previous
   terminal push, or a push-only command. Push-only behavior is reserved for
   `gi только пуш`.
@@ -81,6 +87,9 @@ Before any `gi коммит`, `gi пуш`, `gi коммит пуш`, or `gi то
   change was already authorized, otherwise leave it unstaged and report it;
 - inspect staged and unstaged changes with compact stats or targeted checks;
 - identify the current branch and configured remote;
+- for a push, identify the upstream before staging or committing. If it is
+  absent, ask which remote branch to use and set tracking on the first push;
+  never infer the destination from another remote branch containing HEAD;
 - keep user/unrelated changes out of the commit;
 - stop and explain the blocker if scope is ambiguous, conflicts are present,
   secrets may be included, the project is not a git repository, no remote is

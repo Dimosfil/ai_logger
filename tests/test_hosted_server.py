@@ -107,6 +107,22 @@ class HostedServerTests(unittest.TestCase):
                 self.assertIn("/api/agent/logs", html)
                 self.assertNotIn("adminToken", html)
 
+    def test_read_api_preserves_machine_identity_and_role(self):
+        for machine in ("my-pc", "friend-pc"):
+            self.assertEqual(self.call("/ingest", method="POST", body={
+                "logger": "media", "level": "INFO", "message": "machine.check",
+                "context": {"project": "media", "instance_id": machine,
+                            "service": "executor", "environment": "local"},
+            })[0], 202)
+        status, result = self.call("/api/agent/logs?project=media")
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            {record["context"]["instance_id"] for record in result["records"]},
+            {"my-pc", "friend-pc"},
+        )
+        self.assertTrue(all(record["context"]["service"] == "executor"
+                            for record in result["records"]))
+
     def test_storage_failure_is_not_accepted(self):
         self.store.fail = True
         status, result = self.call("/ingest", method="POST", body={
@@ -115,6 +131,21 @@ class HostedServerTests(unittest.TestCase):
         })
         self.assertEqual(status, 503)
         self.assertEqual(result["error"], "storage_unavailable")
+
+    def test_error_details_survive_ingest_and_read(self):
+        exception = {"type": "ConfigError", "message": "Missing port setting",
+                     "stack_trace": "ConfigError: Missing port setting\n at load (config.js:12:3)"}
+        context = {"project": "media", "description": "Missing port setting",
+                   "file": "src/config.js", "line": 12, "entity": "executor"}
+        status, _ = self.call("/ingest", method="POST", body={
+            "logger": "media.startup", "level": "ERROR", "message": "startup.error",
+            "context": context, "exception": exception,
+        })
+        self.assertEqual(status, 202)
+        status, result = self.call("/api/agent/logs?project=media")
+        self.assertEqual(status, 200)
+        self.assertEqual(result["records"][0]["exception"], exception)
+        self.assertEqual(result["records"][0]["context"], context)
 
 
 if __name__ == "__main__":

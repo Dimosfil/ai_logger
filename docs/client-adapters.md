@@ -89,9 +89,16 @@ Supported client environment variables:
 - `AI_LOGGER_PROJECT`
 - `AI_LOGGER_SERVICE`
 - `AI_LOGGER_ENVIRONMENT`
+- `AI_LOGGER_INSTANCE_ID` (stable machine label, sent as `context.instance_id`)
 - `AI_LOGGER_HOST`
 - `AI_LOGGER_HTTP_TIMEOUT`
 - `AI_LOGGER_FALLBACK_JSONL_PATH`
+
+Use a distinct permanent machine ID for each source machine or hosting
+installation. Supply it to Docker containers from deployment configuration;
+do not derive it from container hostnames. A configured ID accompanies every
+record and cannot be overridden by event context. It is optional for older
+clients; Python also accepts `AiLoggerClientOptions(instance_id="my-pc", ...)`.
 
 ## Agent Configuration Flow
 

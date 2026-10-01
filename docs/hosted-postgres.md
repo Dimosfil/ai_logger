@@ -41,6 +41,21 @@ the container and the loopback host port; there is no separate publish port.
   count filters. The existing JSONL journal is available at `/journal` when
   configured.
 
+The time column shows `DD.MM.YYYY HH:mm:ss` in the browser's local timezone,
+without fractional seconds or a timezone suffix. Hover over a time to see the
+original timestamp with its full precision and timezone.
+The “Машина” column displays `context.instance_id` from the sending client;
+older records without it show an em dash. Configure `AI_LOGGER_INSTANCE_ID`
+on each sender, using distinct permanent IDs for your PC, other PCs, and hosting.
+
+The message column displays an error description, code, source file/line and
+entity when supplied, plus an exception type and up to eight stack lines.
+“Подробности” shows labeled role, environment, request/task IDs and other
+selected metadata instead of raw JSON. Older event-only records show a
+readable event/code label and explicitly indicate missing diagnostics.
+Send exception type/message/stack_trace in the protocol's `exception` object;
+optional `context.description/file/line/function/entity` provide source details.
+
 The Node client in `clients/node/` needs only
 `AI_LOGGER_SERVER_URL=https://<host>/ingest` and
 `AI_LOGGER_PROJECT=ai-media-client`. It sends only selected diagnostic

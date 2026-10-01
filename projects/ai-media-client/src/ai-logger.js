@@ -15,6 +15,7 @@ function createForwarder({ env = process.env, fetchImpl = fetch } = {}) {
     project: 'ai-media-client',
     service: env.AI_LOGGER_SERVICE || env.MEDIA_REPLICA_ROLE || 'web',
     environment: env.AI_LOGGER_ENVIRONMENT || 'production',
+    instanceId: env.AI_LOGGER_INSTANCE_ID,
     fallbackJsonlPath: env.AI_LOGGER_FALLBACK_JSONL_PATH || null,
     timeoutMs: 1500,
     fetchImpl,
@@ -57,7 +58,11 @@ function createForwarder({ env = process.env, fetchImpl = fetch } = {}) {
       enqueue({
         level: 'ERROR', logger: `ai-media-client.${source}`,
         message: safeIdentifier(row.event, 'system.error'),
-        context: { source, error_code: code },
+        context: { source, error_code: code,
+          ...Object.fromEntries(['description', 'file', 'line', 'function', 'entity']
+            .filter(key => row.diagnostic?.[key] != null)
+            .map(key => [key, row.diagnostic[key]])) },
+        exception: row.exception || row.diagnostic?.exception,
       });
     },
     async flush() { while (draining || pending.length) await (draining || drain()); },

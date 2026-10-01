@@ -25,6 +25,13 @@ Success criteria:
 
 ## Layers
 
+The opt-in Node.js system-error recorder is extracted from the temporary media
+client implementation. Its private, project-scoped PostgreSQL schema and
+queue/sanitizer/retention contract are documented in
+[system-error-recorder.md](system-error-recorder.md). The source application's
+table remains active; the new private table is not used by the public ingest
+server and is installed only explicitly by its owner.
+
 ```mermaid
 flowchart LR
   App["Project application"] --> NativeLogger["Native logging framework"]
@@ -59,6 +66,12 @@ The hosted service currently has no HTTP authentication. `/ingest`,
 routes are open. `/` and `/admin` display PostgreSQL records; `/journal`
 displays the local JSONL copy when configured. No key issue or revoke routes
 are exposed.
+The PostgreSQL table UI formats timestamps as `DD.MM.YYYY HH:mm:ss` in the
+browser's local timezone, with seconds but no fractional seconds or offset.
+The original timestamp is preserved in the time cell's hover title; missing
+values show an em dash and invalid dates retain their source text. Stored
+records and API timestamp serialization are unchanged. Implementation:
+`src/ai_logger/admin.py` (checked 2026-09-30).
 `/health` reports storage unavailable with HTTP 503 when PostgreSQL cannot be
 reached. The public access policy is deliberate for the initial deployment;
 records must be sanitized before sending.
@@ -78,11 +91,11 @@ fallback when the server is unreachable.
 The Node.js client uses no API key and rejects remote HTTP URLs; loopback HTTP
 is allowed for local development.
 
-The `ai-media-client` integration is prepared but not installed in that
-repository. Its historical `media_system_errors` and generation/account
-journals remain application-owned. The central logger receives only new,
-sanitized diagnostic events; no cross-database copy is required for ingest.
-`integrations/ai-media-client/` is the transfer package for the existing
+The `ai-media-client` source already contains forwarding hooks; actual hosted
+delivery has not been verified in this task. Its `media_system_errors` and
+generation/account journals remain application-owned. The central logger
+receives selected diagnostic metadata; full error-store replacement is pending.
+`projects/ai-media-client/` is the transfer package for the existing
 Node client and media-specific forwarder. The backend and Telegram bot remain
 in `ai_logger`. The bot uses private-chat long polling with the configured
 Telegram token and responds to `/start` and `/help`; it has no access to media
@@ -90,10 +103,68 @@ tasks or log records yet. `getMe` must identify `ai_loggerbot` before polling.
 Current implementation evidence: `src/ai_logger/server.py`,
 `src/ai_logger/postgres_store.py`, `src/ai_logger/admin.py`,
 `src/ai_logger/telegram_bot.py`, `clients/node/ai-logger-client.mjs`,
-`integrations/ai-media-client/`, `tests/test_hosted_server.py`, and
+`projects/ai-media-client/`, `tests/test_hosted_server.py`, and
 `docs/hosted-postgres.md` (checked 2026-09-29).
 
 ## Contracts
+
+### Readable error diagnostics (implemented 2026-09-30)
+
+Admin records display description (context.description, then exception.message),
+or a readable known-event label with the original event retained. Known code
+labels describe only the reported category, never infer an exact root cause.
+File/module, line, function, entity, exception type and a bounded eight-line
+stack fragment are shown when present. Python traceback fragments keep the
+last eight lines; other stacks keep the first eight. Missing error descriptions
+and stacks are stated explicitly, with no invented source location.
+Selected scalar metadata is rendered as labeled details, never raw context JSON.
+All supplied content uses textContent, including stack and descriptions.
+
+Node clients accept optional exception type/message/stack_trace (or Error
+name/message/stack), bounded to 100/1000/4000 characters. Context allowlists
+description (1000), file/line/function/entity (200 each). Existing credential
+redaction applies; URL credentials/query/fragment are stripped from diagnostic
+strings. Python logging adds source pathname to existing line/function metadata
+and already serializes exceptions. Storage/read APIs use the existing context
+and exception contract without a migration.
+The media transfer package forwards explicit row.diagnostic fields and
+row.exception, excluding arbitrary row.message/details. Its live consumer
+requires an update before sending these fields; old records are not backfilled.
+Evidence: `src/ai_logger/admin.py`, `src/ai_logger/logging_adapter.py`,
+`clients/node/ai-logger-client.mjs`, `clients/node/system-errors.mjs`,
+`tests/test_admin_ui.py`, Node client/recorder/transfer tests.
+
+### Source machine identity (implemented 2026-09-30)
+
+The optional `context.instance_id` identifies a sender's machine or hosting
+installation. Node.js and Python clients read `AI_LOGGER_INSTANCE_ID` from
+their configuration; direct construction accepts `instanceId` and
+`instance_id`, respectively. A nonblank configured value is trimmed and added
+to every outgoing record, including fallback delivery. Event context cannot
+override it. An unset/blank value does not generate a hostname or random ID.
+Node.js applies its existing 200-character diagnostic-field sanitization.
+Deployment owns uniqueness and persistence: roles on one machine share its
+configured ID, other machines use different IDs, and container recreation
+retains the configuration. `service` remains the process role and
+`environment` remains the environment. No `run_id` or storage migration is
+required. Ingest and read APIs retain the field as ordinary record context;
+the PostgreSQL admin table displays it in “Машина”, or an em dash when absent.
+Old stored records are not backfilled.
+
+Evidence: `clients/node/ai-logger-client.mjs`,
+`src/ai_logger/client.py`, `src/ai_logger/config.py`,
+`src/ai_logger/admin.py`, `projects/ai-media-client/src/`,
+`clients/node/ai-logger-client.test.mjs`, and `tests/test_client_adapters.py`.
+The consumer package stages updated client/forwarder files; the external
+consumer repository and its private deployment configuration were not changed.
+
+Served consumers are organized under `projects/<project-id>/`. Each directory
+owns consumer-specific adapters, tests, public configuration examples and
+rollout instructions; [projects/README.md](../../../projects/README.md) indexes
+them. Shared SDKs remain under `clients/`, backend runtime under `src/ai_logger/`,
+and durable behavior contracts under project memory. This organization is
+implemented as of 2026-09-30; moving integration files does not change runtime
+behavior or modify external source repositories.
 
 `Logger` is the public application API. It creates structured `LogRecord`
 instances from severity, message, context, tags, and optional exception data.

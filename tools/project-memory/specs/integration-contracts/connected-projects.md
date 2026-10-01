@@ -26,6 +26,18 @@ them for the current task.
 
 ## AI Media Client
 
+- Consumer workspace: [projects/ai-media-client](../../../../projects/ai-media-client/README.md)
+  holds its transferable integration, tests, non-secret environment example,
+  and agent switch prompt. Shared error-recorder logic remains in `clients/node/`.
+
+- Extraction verified 2026-09-30: `src/system-errors.js`, its v14 SQL schema,
+  and generation-journal sanitization are adapted into
+  `clients/node/system-errors.mjs`, `system-errors.sql`, and `sanitize.mjs`.
+  The reusable private table is `ai_logger_system_errors`, partitioned by
+  project. The user chose to retain all working source code and the original
+  table; no consumer switch or historical data migration was performed. See
+  [recorder contract](../system-error-recorder.md).
+
 - Local path: `D:\AI\ai-media-client`
 - Repository: `https://github.com/sidindeep/ai-media-client`
 - Role: first Node.js client of the cross-stack HTTP ingest protocol and
@@ -35,8 +47,8 @@ them for the current task.
   errors in PostgreSQL `media_system_errors`; the account generation journal
   remains an application-owned PostgreSQL workflow.
 - Active ai_logger edge: `clients/node/ai-logger-client.mjs` was copied to
-  `ai-media-client/src/ai-logger-client.mjs` and connected through
-  `src/ai-logger.js` to selected system and lifecycle events. Delivery is
+  `ai-media-client/src/ai-logger/client.mjs` and connected through
+  `src/ai-logger/index.js` to selected system and lifecycle events. Delivery is
   enabled when `AI_LOGGER_SERVER_URL` is set. Existing local journals remain in place.
   Media prompts, tokens, cookies, and raw provider payloads stay out of
   central logs.

@@ -93,6 +93,10 @@
 ## Git
 
 - Default: the agent edits and verifies; the user reviews and commits.
+- This default permits agent commits on explicit GI Git-finish commands below.
+  If a project intentionally forbids all agent commits, state that exception
+  explicitly and report `gi пуш` as blocked rather than treating it as a
+  push-only command or asking the user to commit and retry it.
 - Treat `gi коммит`, `gi пуш`, `gi коммит пуш`, and `gi только пуш` as explicit
   git finish requests. `gi коммит` commits scoped current changes only; `gi пуш`
   and `gi коммит пуш` commit scoped current changes and push the current branch;
@@ -103,6 +107,9 @@
   Inspect status, keep unrelated/user changes out, follow commit-message
   preferences, and stop on ambiguous scope, missing remote, conflicts, secrets,
   or push failures.
+- For a branch without an upstream, obtain the intended remote branch before
+  staging or committing for a push, then set tracking on the first push. Do not
+  infer the target from another branch that happens to contain the same HEAD.
 - A Git-finish command finalizes only the active task scope already established
   in the current conversation or an explicit user-selected change set. Never
   infer that all dirty files are one task from apparent similarity. If scope is

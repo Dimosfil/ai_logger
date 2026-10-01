@@ -45,6 +45,12 @@ and preserve only required evidence in its normal artifact location.
 
 ## Documentation Versus Summary Versus Project Memory
 
+Current logging specifications:
+
+- [Logging architecture](specs/logging-architecture.md)
+- [Reusable system error recorder](specs/system-error-recorder.md)
+- [Connected projects](specs/integration-contracts/connected-projects.md)
+
 `README.md`, `docs/`, and runbooks are the project documentation layer.
 `tools/summary/` is compact handoff state for the current or recent chat.
 `tools/project-memory/` is long-lived implementation-driving knowledge.

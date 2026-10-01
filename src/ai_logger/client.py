@@ -38,6 +38,7 @@ class AiLoggerClientOptions:
     timeout_seconds: float = 5.0
     fallback_jsonl_path: str | Path | None = None
     redact_keys: frozenset[str] = field(default_factory=lambda: DEFAULT_REDACT_KEYS)
+    instance_id: str | None = None
 
 
 class AiLoggerClient:
@@ -78,6 +79,8 @@ class AiLoggerClient:
             **self._default_context(),
             **context,
         }
+        if self.options.instance_id and self.options.instance_id.strip():
+            context["instance_id"] = self.options.instance_id.strip()
         payload["context"] = redact_value(context, self.options.redact_keys)
         if "exception" in payload:
             payload["exception"] = redact_value(payload["exception"], self.options.redact_keys)

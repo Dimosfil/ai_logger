@@ -80,6 +80,7 @@ def log_record_from_python(record: logging.LogRecord) -> LogRecord:
 def _context_from_python_record(record: logging.LogRecord) -> dict[str, Any]:
     context: dict[str, Any] = {
         "module": record.module,
+        "file": record.pathname,
         "function": record.funcName,
         "line": record.lineno,
         "thread": record.threadName,

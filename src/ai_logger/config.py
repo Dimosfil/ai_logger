@@ -73,7 +73,7 @@ def configured_logger(
 
 
 def build_client_from_env(environ: Mapping[str, str] | None = None) -> AiLoggerClient:
-    env = environ or os.environ
+    env = os.environ if environ is None else environ
     server_url = env.get("AI_LOGGER_SERVER_URL")
     if not server_url:
         raise ValueError("AI_LOGGER_SERVER_URL is required to build an ai_logger client.")
@@ -84,6 +84,7 @@ def build_client_from_env(environ: Mapping[str, str] | None = None) -> AiLoggerC
             project=env.get("AI_LOGGER_PROJECT"),
             service=env.get("AI_LOGGER_SERVICE"),
             environment=env.get("AI_LOGGER_ENVIRONMENT"),
+            instance_id=env.get("AI_LOGGER_INSTANCE_ID"),
             host=env.get("AI_LOGGER_HOST"),
             timeout_seconds=float(env.get("AI_LOGGER_HTTP_TIMEOUT", "5")),
             fallback_jsonl_path=env.get("AI_LOGGER_FALLBACK_JSONL_PATH"),
