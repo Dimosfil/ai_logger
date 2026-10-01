@@ -4,6 +4,7 @@ import json
 import sys
 import threading
 import unittest
+from http.client import RemoteDisconnected
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -13,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from ai_logger.aggregator import LogAggregator
 from ai_logger.postgres_store import PostgresStore
-from ai_logger.server import _bind_address_from_env, _database_settings_from_env, create_server
+from ai_logger.server import LogIngestHandler, _bind_address_from_env, _database_settings_from_env, create_server
 
 
 class FakeStore:
@@ -145,6 +146,20 @@ class HostedServerTests(unittest.TestCase):
         })
         self.assertEqual(status, 503)
         self.assertEqual(result["error"], "storage_unavailable")
+
+    def test_ingest_stays_stored_when_response_connection_breaks(self):
+        with patch.object(LogIngestHandler, "end_headers", side_effect=BrokenPipeError), \
+                patch.object(self.server, "handle_error") as handle_error:
+            with self.assertRaises(RemoteDisconnected):
+                self.call("/ingest", method="POST", body={
+                    "logger": "worker", "level": "ERROR", "message": "saved",
+                    "context": {"project": "media"},
+                })
+            handle_error.assert_not_called()
+        self.assertEqual(self.call("/health")[0], 200)
+        status, result = self.call("/api/agent/logs?project=media")
+        self.assertEqual(status, 200)
+        self.assertEqual([record["message"] for record in result["records"]], ["saved"])
 
     def test_error_details_survive_ingest_and_read(self):
         exception = {"type": "ConfigError", "message": "Missing port setting",

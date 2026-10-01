@@ -220,19 +220,23 @@ class LogIngestHandler(BaseHTTPRequestHandler):
 
     def _send_json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        self.send_response(int(status))
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
+        self._send_bytes(status, data, "application/json; charset=utf-8")
 
     def _send_html(self, status: HTTPStatus, html: str) -> None:
         data = html.encode("utf-8")
-        self.send_response(int(status))
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
+        self._send_bytes(status, data, "text/html; charset=utf-8")
+
+    def _send_bytes(self, status: HTTPStatus, data: bytes, content_type: str) -> None:
+        try:
+            self.send_response(int(status))
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            # The request may already be stored; a disconnected client cannot
+            # receive a second response. Close only this connection.
+            self.close_connection = True
 
 
 class LogIngestHttpServer(ThreadingHTTPServer):

@@ -31,6 +31,10 @@ the container and the loopback host port; there is no separate publish port.
 ## Use
 
 - `GET /health` checks the database and returns 200 when ready.
+- If a client disconnects while response headers or a body are being sent,
+  the server closes that connection without printing a disconnect traceback.
+  Records already stored by `/ingest` stay stored even if the client misses
+  the acknowledgement; retry with the same record ID for deduplication.
 - `POST /ingest` accepts one record or up to 100 records, with a 1 MiB body
   limit. Each record needs `context.project`. It returns 202 after storing
   selected records; a database failure returns 503.

@@ -61,6 +61,12 @@ default, `DATABASE_SSL=1` to require TLS. The supplied endpoint lacks TLS, so
 the user-approved URL works without an extra variable. In the default mode,
 database credentials and log records are unencrypted on the database link.
 
+HTTP JSON and HTML response writes handle broken pipe, connection reset and
+connection aborted errors in both headers and body by closing only the affected
+connection. Other I/O errors remain visible. An ingest acknowledgement failure
+does not roll back stored records or repeat ingestion. Implementation:
+`LogIngestHandler._send_bytes` in `src/ai_logger/server.py` (2026-10-01).
+
 The hosted service currently has no HTTP authentication. `/ingest`,
 `/api/agent/logs`, `/`, `/admin`, and the existing JSONL browser/settings/search
 routes are open. `/` and `/admin` display PostgreSQL records; `/journal`
